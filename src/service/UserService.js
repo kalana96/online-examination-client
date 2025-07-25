@@ -1,7 +1,8 @@
 import axios from "axios";
 
 class UserService{
-    static BASE_URL = "http://localhost:1010/api/v1/auth"
+    // static BASE_URL = "http://localhost:1010/api/v1/auth"
+    static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/auth`;
 
     // Configure axios to include credentials for CORS
     static axiosConfig = {

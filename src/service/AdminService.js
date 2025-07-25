@@ -1,7 +1,11 @@
 import axios from "axios";
 
 class AdminService {
-  static BASE_URL = "http://localhost:1010/api/v1/admin/";
+  // static BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  // static BASE_URL = "http://localhost:1010/api/v1/admin/";
+  // static BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/api/v1/admin/`;
+  static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/`;
+  
 
   // Save Admin
   static async saveAdmin(adminData, userDetails, profilePhoto, token) {
@@ -94,6 +98,7 @@ class AdminService {
 
   // Get Admin by ID
   static async getAdminById(id, token) {
+    console.log('BASE_URL:', AdminService.BASE_URL);
     try {
       const response = await axios.get(
         `${this.BASE_URL}getAdminWithUser/${id}`,
@@ -228,7 +233,6 @@ class AdminService {
         adminCode: adminData.adminCode?.trim() || "",
         firstName: adminData.firstName?.trim() || "",
         lastName: adminData.lastName?.trim() || "",
-        address: adminData.address?.trim() || "",
         email: adminData.email?.trim().toLowerCase() || "",
         contactNo: adminData.contactNo?.trim() || null,
         address: adminData.address?.trim() || null

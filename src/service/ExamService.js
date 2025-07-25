@@ -43,8 +43,8 @@ apiClient.interceptors.response.use(
 );
 
 class ExamService {
-  static BASE_URL = "http://localhost:1010/";
-
+  // static BASE_URL = "http://localhost:1010/";
+  static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/`;
 
   //  // Schedule a new exam
   // static async scheduleExam(data, token) {

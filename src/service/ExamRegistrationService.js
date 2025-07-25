@@ -3,6 +3,7 @@ import axios from "axios";
 // Base configuration for API calls
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1010/';
 
+
 // Create axios instance with default configuration
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -43,7 +44,8 @@ apiClient.interceptors.response.use(
 );
 
 class ExamRegistrationService {
-  static baseURL = "http://localhost:1010";
+  // static baseURL = "http://localhost:1010";
+  static baseURL = `${import.meta.env.VITE_API_BASE_URL}`;
 
   /**
    * Register student for an exam

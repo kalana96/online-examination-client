@@ -1,7 +1,9 @@
 import axios from "axios";
 
 class StudentService {
-  static BASE_URL = "http://localhost:1010";
+  // static BASE_URL = "http://localhost:1010";
+  static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}`;
+
 
   // Add Student
   static async addStudent(data, token) {

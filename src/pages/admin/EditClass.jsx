@@ -66,7 +66,7 @@ function EditClass() {
   const fetchClassData = async (id) => {
     try {
       setLoading(true);
-      const response = await ClassService.getClassById(id, token);
+      const response = await ClassService.getAdminClassById(id, token);
 
       if (response.code === "00" && response.content) {
         const classData = response.content;
