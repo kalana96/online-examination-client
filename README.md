@@ -38,7 +38,7 @@ A modern, responsive web application for conducting online examinations built wi
 - **Report Generation**: Generate detailed performance reports and analytics
 - **Exam Scheduling**: Schedule exams with flexible timing and duration settings
 - **Question Import/Export**: Import questions from various formats (CSV, Excel, Word)
-- **Plagiarism Detection**: Basic plagiarism checking for written responses
+- **Proctoring**: Video proctoring integration
 
 ### Technical Features
 
@@ -137,7 +137,6 @@ The application will open in your browser at `http://localhost:3000`
 ```
 online-examination-client/
 ├── public/
-│   ├── index.html
 │   └── favicon.ico
 ├── src/
 │   ├── components/          # Reusable UI components
@@ -160,13 +159,12 @@ online-examination-client/
 │   ├── partials/            # Reusable partial components
 │   ├── services/            # API service functions
 │   ├── utils/               # Utility functions
-│   ├── constants/           # Application constants
-│   ├── styles/              # Global styles and Tailwind config
 │   ├── assets/              # Images, icons, and other assets
 │   └── App.js               # Main application component
-├── tailwind.config.js       # Tailwind CSS configuration
 ├── package.json             # Project dependencies and scripts
 ├── .env.example             # Environment variables template
+├── index.html
+├── tailwind.config.js       # Tailwind CSS configuration
 └── README.md                # Project documentation
 ```
 
@@ -404,8 +402,6 @@ If you encounter any issues or have questions:
 
 ### Upcoming Features
 
-- [ ] Dark mode toggle
-- [ ] Offline exam capability
 - [ ] Advanced analytics dashboard
 - [ ] Multi-language support
 - [ ] Video proctoring integration

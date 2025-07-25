@@ -10,6 +10,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   // Check if user is authenticated
   if (!isAuthenticated) {
     toast.error("Please login to access this page");
+    // console.log("Please login to access this page");
     return <Navigate to="/" replace />;
   }
 
@@ -31,7 +32,6 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
         return <Navigate to="/" replace />;
     }
   }
-
   return children;
 };
 

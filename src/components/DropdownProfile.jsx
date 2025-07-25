@@ -53,16 +53,22 @@ function DropdownProfile({ align }) {
   // Logout with callbacks
   const handleLogout = async () => {
     setDropdownOpen(false);
-    await UserService.logoutWithCallback(
-      (result) => {
-        console.log("Logout successful:", result.message);
-        navigate("/");
-      },
-      (error) => {
-        console.warn("Logout warning:", error.message);
-        navigate("/"); // Still redirect
-      }
-    );
+    try {
+      await UserService.logoutWithCallback(
+        (result) => {
+          console.log("Logout successful:", result.message);
+          navigate("/", { replace: true }); // Use replace to prevent back navigation
+        },
+        (error) => {
+          console.warn("Logout warning:", error.message);
+          navigate("/", { replace: true }); // Still redirect
+        }
+      );
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Ensure navigation happens even if logout API fails
+      navigate("/", { replace: true });
+    }
   };
 
   // Force logout without backend call

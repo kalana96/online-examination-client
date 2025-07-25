@@ -100,6 +100,9 @@ class UserService{
     // Enhanced logout with proper error handling and callback support
     static async logoutWithCallback(onSuccess, onError) {
         try {
+            // Clear local storage
+            this.clearUserData();
+
             const result = await this.logout();
             if (onSuccess) {
                 onSuccess(result);
