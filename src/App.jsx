@@ -8,44 +8,45 @@ import "react-toastify/dist/ReactToastify.css";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Import pages
-import Subject from "./pages/Subject";
-import LoginForm from "./pages/Login";
+import Subject from "./pages/admin/Subject";
+import LoginForm from "./pages/auth/Login";
 import AdminDashboard from "./screens/admin/AdminDashboard";
 import StudentDashboard from "./screens/student/StudentDashboard";
 import TeacherDashboard from "./screens/teacher/TeacherDashboard";
-import AddStudent from "./pages/AddStudent";
-import EditStudent from "./pages/EditStudent";
-import AddTeacher from "./pages/AddTeacher";
-import AdminProfile from "./pages/AdminProfile";
-import AddClass from "./pages/AddClass";
-import ViewStudent from "./pages/ViewStudent";
-import StudentProfile from "./pages/StudentProfile";
-import ClassList from "./pages/ClassList";
-import EditClass from "./pages/EditClass";
-import StudentList from "./pages/StudentList";
-import TeacherList from "./pages/TeacherList";
-import EditTeacher from "./pages/EditTeacher";
-import TeacherProfile from "./pages/TeacherProfile";
-import TeacherClass from "./pages/TeacherClass";
-import ExamSchedule from "./pages/ExamSchedule";
-import ExamList from "./pages/ExamList";
-import ExamEdit from "./pages/ExamEdit";
-import ExamDetails from "./pages/ExamDetails";
-import ExamCreate from "./pages/ExamCreate";
-import QuestionBank from "./pages/QuestionBank";
-import ExamQuestions from "./pages/ExamQuestions";
-import StudentClass from "./pages/StudentClass";
-import TeacherClassEdit from "./pages/TeacherClassEdit";
-import TeacherStudent from "./pages/TeacherStudent";
-import TeacherStudentList from "./pages/TeacherStudentList";
-import TeacherLiveExam from "./pages/TeacherLiveExam";
-import Proctoring from "./pages/Proctoring";
-import CompletedExam from "./pages/CompletedExam";
-import StudentUpcomingExam from "./pages/StudentUpcomingExam";
-import StudentTodayExam from "./pages/StudentTodayExam";
-import ExamEnrollment from "./pages/ExamEnrollment";
-import TakingExam from "./pages/TakingExam";
-import ResultProcess from "./pages/ResultProcess";
+import AddStudent from "./pages/admin/AddStudent";
+import EditStudent from "./pages/admin/EditStudent";
+import AddTeacher from "./pages/admin/AddTeacher";
+import AdminProfile from "./pages/admin/AdminProfile";
+import AddClass from "./pages/admin/AddClass";
+import ViewStudent from "./pages/admin/ViewStudent";
+import StudentProfile from "./pages/student/StudentProfile";
+import ClassList from "./pages/admin/ClassList";
+import EditClass from "./pages/admin/EditClass";
+import StudentList from "./pages/admin/StudentList";
+import TeacherList from "./pages/admin/TeacherList";
+import EditTeacher from "./pages/admin/EditTeacher";
+import TeacherProfile from "./pages/teacher/TeacherProfile";
+import TeacherClass from "./pages/teacher/TeacherClass";
+import ExamSchedule from "./pages//teacher/ExamSchedule";
+import ExamList from "./pages/teacher/ExamList";
+import ExamEdit from "./pages/teacher/ExamEdit";
+import ExamDetails from "./pages/teacher/ExamDetails";
+import ExamCreate from "./pages/teacher/ExamCreate";
+import QuestionBank from "./pages/teacher/QuestionBank";
+import ExamQuestions from "./pages/teacher/ExamQuestions";
+import StudentClass from "./pages/student/StudentClass";
+import TeacherClassEdit from "./pages/teacher/TeacherClassEdit";
+import TeacherStudent from "./pages/teacher/TeacherStudent";
+import TeacherStudentList from "./pages/teacher/TeacherStudentList";
+import TeacherLiveExam from "./pages/teacher/TeacherLiveExam";
+import Proctoring from "./pages/teacher/Proctoring";
+import CompletedExam from "./pages/teacher/CompletedExam";
+import StudentUpcomingExam from "./pages/student/StudentUpcomingExam";
+import StudentTodayExam from "./pages/student/StudentTodayExam";
+import ExamEnrollment from "./pages/student/ExamEnrollment";
+import TakingExam from "./pages/student/TakingExam";
+import ResultProcess from "./pages/teacher/ResultProcess";
+import ExamSubmissionPage from "./pages/student/ExamSubmissionPage";
 
 function App() {
   const location = useLocation();
@@ -210,7 +211,7 @@ function App() {
           }
         />
         <Route
-          path="/student/takingExam"
+          path="/student/takingExam/:id"
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
               <TakingExam />
@@ -222,6 +223,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
               <ExamEnrollment />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/examSubmission"
+          element={
+            <ProtectedRoute allowedRoles={["STUDENT"]}>
+              <ExamSubmissionPage />
             </ProtectedRoute>
           }
         />

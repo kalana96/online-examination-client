@@ -1,7 +1,8 @@
 import axios from "axios";
 
 class SubjectService{
-    static BASE_URL = "http://localhost:1010/api/v1/"
+    // static BASE_URL = "http://localhost:1010/api/v1/"
+    static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/`;
 
 
 

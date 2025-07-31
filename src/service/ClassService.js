@@ -1,7 +1,8 @@
 import axios from "axios";
 
 class ClassService {
-  static BASE_URL = "http://localhost:1010/";
+  // static BASE_URL = "http://localhost:1010/";
+  static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/`;
 
   // Add Class
   static async addClass(data, token) {
@@ -96,7 +97,7 @@ class ClassService {
   }
 
   // Get Class by ID
-  static async getClassById(id, token) {
+  static async getAdminClassById(id, token) {
     try {
       const response = await axios.get(
         `${ClassService.BASE_URL}api/v1/admin/searchClass/${id}`,

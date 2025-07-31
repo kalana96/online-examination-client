@@ -1,7 +1,8 @@
 import axios from "axios";
 
 class GradeService{
-    static BASE_URL = "http://localhost:1010"
+    // static BASE_URL = "http://localhost:1010"
+    static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}`;
 
 
       static async getAllGrades(token){

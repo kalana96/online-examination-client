@@ -1,7 +1,8 @@
 import axios from "axios";
 
 class AdminDashboardService {
-  static BASE_URL = "http://localhost:1010";
+  // static BASE_URL = "http://localhost:1010";
+  static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}`;
 
   // Get Dashboard Statistics
   static async getDashboardStats(token) {

@@ -1,7 +1,8 @@
 import axios from "axios";
 
 class UserService{
-    static BASE_URL = "http://localhost:1010/api/v1/auth"
+    // static BASE_URL = "http://localhost:1010/api/v1/auth"
+    static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1/auth`;
 
     // Configure axios to include credentials for CORS
     static axiosConfig = {
@@ -100,6 +101,9 @@ class UserService{
     // Enhanced logout with proper error handling and callback support
     static async logoutWithCallback(onSuccess, onError) {
         try {
+            // Clear local storage
+            this.clearUserData();
+
             const result = await this.logout();
             if (onSuccess) {
                 onSuccess(result);

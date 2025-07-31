@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useRef } from "react";
 import { toast } from "react-toastify";
 import Header from "../../partials/Header";
 import TeacherSidebar from "../../partials/TeacherSidebar";
@@ -29,9 +30,11 @@ function TeacherDashboard() {
   const token = localStorage.getItem("token");
   const teacherId = localStorage.getItem("id");
 
-  // Fetch data on component mount
+  const hasInitialized = useRef(false);
+
   useEffect(() => {
-    if (teacherId && token) {
+    if (teacherId && token && !hasInitialized.current) {
+      hasInitialized.current = true;
       fetchAllData();
     }
   }, [teacherId, token]);
