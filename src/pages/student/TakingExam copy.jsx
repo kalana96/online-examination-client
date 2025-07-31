@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import TakingExamService from "../../service/TakingExamService";
 import {
   MessageCircle,
   Bell,
@@ -42,50 +41,20 @@ const TakingExam = () => {
   const [connectionStatus, setConnectionStatus] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
-
-  // New state for exam session management
-  const [examSession, setExamSession] = useState(null);
-  const [attemptId, setAttemptId] = useState(null);
-  const [studentId, setStudentId] = useState(null);
-
   const editorRef = useRef(null);
   const navigate = useNavigate();
   const autoSaveTimeoutRef = useRef(null);
-  const timeUpdateIntervalRef = useRef(null);
   const { id } = useParams();
   const examId = id;
-  // const token = localStorage.getItem("token");
 
-  // Initialize student ID from token or localStorage
+  // Fetch exam data on component mount
   useEffect(() => {
-    // Decode token to get student ID or get from localStorage
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        // For now, assuming studentId is stored separately
-        const storedStudentId = localStorage.getItem("id");
-        if (storedStudentId) {
-          setStudentId(parseInt(storedStudentId));
-        }
-      } catch (error) {
-        console.error("Error getting student ID:", error);
-        navigate("/login");
-      }
-    } else {
-      navigate("/login");
-    }
-  }, [navigate]);
+    fetchExamData();
+  }, []);
 
-  //useEffect for fetching exam data
+  // Auto-save answers periodically
   useEffect(() => {
-    if (studentId) {
-      fetchExamData();
-    }
-  }, [studentId]);
-
-  //useEffect for auto-save with better error handling
-  useEffect(() => {
-    if (Object.keys(answers).length > 0 && attemptId) {
+    if (Object.keys(answers).length > 0 && examData) {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
@@ -100,27 +69,15 @@ const TakingExam = () => {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [answers, attemptId]);
+  }, [answers, examData]);
 
-  //Cleanup effect
-  useEffect(() => {
-    return () => {
-      if (timeUpdateIntervalRef.current) {
-        clearInterval(timeUpdateIntervalRef.current);
-      }
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Modified timer effect to work with server-synchronized time
+  // Timer effect
   useEffect(() => {
     if (timeRemaining <= 0) return;
 
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
-        if (prev <= 1) {
+        if (prev <= 0) {
           clearInterval(timer);
           handleAutoSubmit();
           return 0;
@@ -133,116 +90,66 @@ const TakingExam = () => {
   }, [timeRemaining]);
 
   // Connection status monitoring
-  // useEffect(() => {
-  //   const handleOnline = () => setConnectionStatus(true);
-  //   const handleOffline = () => setConnectionStatus(false);
-
-  //   window.addEventListener("online", handleOnline);
-  //   window.addEventListener("offline", handleOffline);
-
-  //   return () => {
-  //     window.removeEventListener("online", handleOnline);
-  //     window.removeEventListener("offline", handleOffline);
-  //   };
-  // }, []);
-
-  // connection status monitoring with service integration
   useEffect(() => {
-    const handleOnline = () => {
-      setConnectionStatus(true);
-
-      // Sync time with server when coming back online
-      syncTimeWithServer();
-
-      // Optionally sync data when coming back online
-      if (attemptId && Object.keys(answers).length > 0) {
-        autoSaveAnswers();
-      }
-    };
-
-    const handleOffline = () => {
-      setConnectionStatus(false);
-    };
+    const handleOnline = () => setConnectionStatus(true);
+    const handleOffline = () => setConnectionStatus(false);
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
-    // Initial connection check
-    setConnectionStatus(navigator.onLine);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [attemptId, answers]);
+  }, []);
 
-  // helper function to sync time with server immediately
-  const syncTimeWithServer = async () => {
-    if (attemptId) {
-      try {
-        const timeData = await TakingExamService.getTimeRemaining(attemptId);
-        setTimeRemaining(timeData.totalSecondsRemaining || 0);
-
-        if (timeData.timeExpired || timeData.totalSecondsRemaining <= 0) {
-          handleAutoSubmit();
-        }
-      } catch (error) {
-        console.error("Error syncing time:", error);
-      }
-    }
-  };
-
-  // fetchExamData function
-  const fetchExamData = async () => {
-    if (!studentId) return;
-
+  const fetchExamDetails = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // First, get exam details for taking
-      const examDetails = await TakingExamService.getExamForTaking(
-        examId,
-        studentId
-      );
-      // setExamData(examDetails);
+      const response = await ExamService.getExamByStudent(examId, token);
+      if (response.code === "00") {
+        setExam(response.content);
+      } else {
+        toast.error("Failed to fetch exam details");
+        navigate("/student/today-exams");
+      }
+    } catch (error) {
+      console.error("Error fetching exam:", error);
+      toast.error("Error fetching exam details");
+      navigate("/student/today-exams");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Then start the exam session
-      const ipAddress = await TakingExamService.getClientIPAddress();
-      const sessionData = await TakingExamService.startExamSession(
-        examId,
-        studentId,
-        ipAddress
-      );
+  const fetchExamData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-      setExamData(sessionData);
-      // setExamSession(sessionData);
-      setAttemptId(sessionData.attemptId);
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`, // Add auth token
+        },
+      });
 
-      // check if sessionData.timeRemaining is in minutes or seconds
-      const timeInSeconds = sessionData.timeRemaining
-        ? sessionData.timeRemaining > 1000
-          ? sessionData.timeRemaining
-          : sessionData.timeRemaining * 60
-        : examDetails.duration * 60;
-
-      setTimeRemaining(timeInSeconds);
-
-      // Load existing answers if resuming exam
-      if (sessionData.existingAnswers) {
-        // Transform the existingAnswers from backend format to frontend format
-        const transformedAnswers = {};
-        Object.entries(sessionData.existingAnswers).forEach(
-          ([questionId, answerObj]) => {
-            // Extract just the answerText from the answer object
-            transformedAnswers[questionId] = answerObj.answerText || "";
-          }
-        );
-        setAnswers(transformedAnswers);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch exam data: ${response.statusText}`);
       }
 
-      // Start periodic time updates
-      startTimeUpdates();
+      const data = await response.json();
+
+      setExamData(data);
+      setTimeRemaining(data.duration * 60); // Convert minutes to seconds
+
+      // Load existing answers if resuming exam
+      if (data.existingAnswers) {
+        setAnswers(data.existingAnswers);
+      }
     } catch (err) {
       console.error("Error fetching exam data:", err);
       setError(err.message);
@@ -251,130 +158,80 @@ const TakingExam = () => {
     }
   };
 
-  //Modified autoSaveAnswers function
   const autoSaveAnswers = async () => {
-    if (!attemptId || Object.keys(answers).length === 0) return;
+    if (!examData || Object.keys(answers).length === 0) return;
 
     try {
       setAutoSaving(true);
 
-      // the helper function for consistent formatting
-      const formattedAnswers = formatAnswersForSubmission(answers);
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/save`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({
+          answers,
+          timeRemaining,
+          currentQuestionIndex,
+        }),
+      });
 
-      await TakingExamService.autoSaveProgress(attemptId, formattedAnswers);
+      if (!response.ok) {
+        throw new Error("Failed to auto-save answers");
+      }
+
       console.log("Answers auto-saved successfully");
     } catch (err) {
       console.error("Auto-save failed:", err);
-      // Don't show error to user for auto-save failures
     } finally {
       setAutoSaving(false);
     }
   };
 
-  // function to periodically update time remaining
-  const startTimeUpdates = () => {
-    if (timeUpdateIntervalRef.current) {
-      clearInterval(timeUpdateIntervalRef.current);
-    }
-
-    // Sync time immediately
-    syncTimeWithServer();
-
-    timeUpdateIntervalRef.current = setInterval(async () => {
-      if (attemptId) {
-        try {
-          const timeData = await TakingExamService.getTimeRemaining(attemptId);
-          // Use totalSecondsRemaining from server response
-          setTimeRemaining(timeData.totalSecondsRemaining || 0);
-
-          if (timeData.timeExpired || timeData.totalSecondsRemaining <= 0) {
-            clearInterval(timeUpdateIntervalRef.current);
-            handleAutoSubmit();
-          }
-        } catch (error) {
-          console.error("Error updating time:", error);
-        }
-      }
-    }, 60000); // Update every minute
-  };
-
-  // Modified handleSubmitExam function
   const handleSubmitExam = async () => {
-    if (!attemptId) {
-      console.error("No attempt ID available for submission");
-      return;
-    }
-
     try {
       setSubmitting(true);
 
-      // Final auto-save before submission using helper function
-      if (Object.keys(answers).length > 0) {
-        const formattedAnswers = formatAnswersForSubmission(answers);
-        await TakingExamService.autoSaveProgress(attemptId, formattedAnswers);
+      const submissionData = {
+        examId,
+        answers,
+        timeRemaining,
+        submittedAt: new Date().toISOString(),
+        completionStats: getSubmissionStats(),
+      };
+
+      const response = await fetch(`${API_BASE_URL}/exams/${examId}/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify(submissionData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to submit exam: ${response.statusText}`);
       }
 
-      // Submit the exam
-      const result = await TakingExamService.submitExamFinal(attemptId);
+      const result = await response.json();
       console.log("Exam submitted successfully:", result);
 
-      // Clear intervals
-      if (timeUpdateIntervalRef.current) {
-        clearInterval(timeUpdateIntervalRef.current);
-      }
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-
-      // Navigate to results page
+      // Navigate to results page or show success message
       navigate(`/student/exam-result/${examId}`, {
-        state: {
-          submissionId: result.submissionId,
-          score: result.score,
-          totalMarks: result.totalMarks,
-        },
+        state: { submissionId: result.submissionId },
       });
     } catch (err) {
       console.error("Error submitting exam:", err);
-      alert(`Failed to submit exam: ${err.message}`);
+      alert("Failed to submit exam. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // const handleAutoSubmit = async () => {
-  //   console.log("Time expired - auto-submitting exam");
-  //   await handleSubmitExam();
-  // };
-
-  //Enhanced auto-submit with better error handling
   const handleAutoSubmit = async () => {
     console.log("Time expired - auto-submitting exam");
-
-    try {
-      await handleSubmitExam();
-    } catch (error) {
-      console.error("Auto-submit failed:", error);
-
-      // Show user that time expired and submission failed
-      alert(
-        "Time has expired! There was an issue submitting your exam automatically. Please contact support."
-      );
-
-      // Still try to save progress
-      if (Object.keys(answers).length > 0 && attemptId) {
-        try {
-          const formattedAnswers = formatAnswersForSubmission(answers);
-          await TakingExamService.autoSaveProgress(attemptId, formattedAnswers);
-          console.log("Progress saved after failed auto-submit");
-        } catch (saveError) {
-          console.error(
-            "Failed to save progress after auto-submit failure:",
-            saveError
-          );
-        }
-      }
-    }
+    await handleSubmitExam();
   };
 
   const refreshExamData = async () => {
@@ -407,18 +264,6 @@ const TakingExam = () => {
       ...prev,
       [questionId]: answer,
     }));
-
-    // Trigger immediate auto-save for important answers
-    if (answer && answer.toString().trim() !== "") {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-
-      // Shorter delay for immediate feedback
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        autoSaveAnswers();
-      }, 5000); // 5 seconds for answered questions
-    }
   };
 
   const goToQuestion = (index) => {
@@ -446,30 +291,11 @@ const TakingExam = () => {
   const getQuestionStatus = (questionIndex) => {
     const question = examData.questions[questionIndex];
     const answer = answers[question.id];
-    if (answer && answer.toString().trim() !== "") {
+    if (answer && answer.trim() !== "") {
       return "answered";
     }
     return "unanswered";
   };
-
-  // new getQuestionStatus function
-  // const getQuestionStatus = (questionIndex) => {
-  //   const question = examData.questions[questionIndex];
-  //   const answer = answers[question.id];
-
-  //   // Convert answer to string and check if it has meaningful content
-  //   const answerString = answer ? String(answer) : "";
-
-  //   // For HTML content, strip tags to check actual text content
-  //   const tempDiv = document.createElement("div");
-  //   tempDiv.innerHTML = answerString;
-  //   const textContent = tempDiv.textContent || tempDiv.innerText || "";
-
-  //   if (textContent.trim() !== "") {
-  //     return "answered";
-  //   }
-  //   return "unanswered";
-  // };
 
   const applyFormatting = (command, value = null) => {
     if (editorRef.current) {
@@ -504,16 +330,13 @@ const TakingExam = () => {
     const totalQuestions = examData.questions.length;
     const answeredQuestions = examData.questions.filter((q) => {
       const answer = answers[q.id];
-      return answer && answer.toString().trim() !== "";
+      return answer && answer.trim() !== "";
     }).length;
 
     return {
       total: totalQuestions,
       answered: answeredQuestions,
       unanswered: totalQuestions - answeredQuestions,
-      percentageComplete: Math.round(
-        (answeredQuestions / totalQuestions) * 100
-      ),
     };
   };
 
@@ -542,98 +365,7 @@ const TakingExam = () => {
       return {
         ...question,
         answer: displayAnswer,
-        isAnswered: answer && answer.toString().trim() !== "",
-      };
-    });
-  };
-
-  //Enhanced error boundary and connection status handling
-  const handleConnectionError = (error) => {
-    if (error.message.includes("Network error")) {
-      setConnectionStatus(false);
-    }
-
-    // Auto-retry logic for network errors
-    setTimeout(() => {
-      setConnectionStatus(navigator.onLine);
-    }, 5000);
-  };
-
-  // Enhanced exit exam functionality
-  const handleExitExam = async () => {
-    const confirmExit = window.confirm(
-      "Are you sure you want to exit the exam? Your progress will be saved, but you'll need to restart the exam session."
-    );
-
-    if (confirmExit) {
-      try {
-        // Auto-save before exiting
-        if (Object.keys(answers).length > 0 && attemptId) {
-          const formattedAnswers = formatAnswersForSubmission(answers);
-          await TakingExamService.autoSaveProgress(attemptId, formattedAnswers);
-        }
-
-        // Clear all intervals and timeouts
-        if (timeUpdateIntervalRef.current) {
-          clearInterval(timeUpdateIntervalRef.current);
-        }
-        if (autoSaveTimeoutRef.current) {
-          clearTimeout(autoSaveTimeoutRef.current);
-        }
-
-        navigate("/student/dashboard");
-      } catch (error) {
-        console.error("Error during exit:", error);
-        // Still navigate even if save fails
-        navigate("/student/dashboard");
-      }
-    }
-  };
-
-  // Enhanced loading state with retry functionality
-  const LoadingComponent = () => (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">
-          {studentId ? "Loading Exam..." : "Initializing..."}
-        </h2>
-        <p className="text-gray-600 mb-4">
-          {studentId
-            ? "Please wait while we prepare your exam."
-            : "Setting up your exam session..."}
-        </p>
-        {error && (
-          <button
-            onClick={refreshExamData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Retry
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
-  // Helper function to format answers consistently
-  const formatAnswersForSubmission = (answersObj) => {
-    return Object.entries(answersObj).map(([questionId, answer]) => {
-      // Ensure answerText is always a string
-      let answerText = "";
-      if (typeof answer === "string") {
-        answerText = answer;
-      } else if (typeof answer === "object") {
-        answerText = JSON.stringify(answer);
-      } else {
-        answerText = String(answer || "");
-      }
-
-      return {
-        questionId: parseInt(questionId),
-        answerText: answerText,
-        isSelected: answerText.trim() !== "",
-        examAttemptId: attemptId,
-        studentId: studentId,
+        isAnswered: answer && answer.trim() !== "",
       };
     });
   };
@@ -1015,7 +747,7 @@ const TakingExam = () => {
               </button>
 
               <button
-                onClick={handleExitExam}
+                onClick={() => navigate("/student/dashboard")}
                 className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <LogOut size={18} />

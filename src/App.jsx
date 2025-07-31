@@ -46,6 +46,7 @@ import StudentTodayExam from "./pages/student/StudentTodayExam";
 import ExamEnrollment from "./pages/student/ExamEnrollment";
 import TakingExam from "./pages/student/TakingExam";
 import ResultProcess from "./pages/teacher/ResultProcess";
+import ExamSubmissionPage from "./pages/student/ExamSubmissionPage";
 
 function App() {
   const location = useLocation();
@@ -210,7 +211,7 @@ function App() {
           }
         />
         <Route
-          path="/student/takingExam"
+          path="/student/takingExam/:id"
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
               <TakingExam />
@@ -222,6 +223,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
               <ExamEnrollment />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/examSubmission"
+          element={
+            <ProtectedRoute allowedRoles={["STUDENT"]}>
+              <ExamSubmissionPage />
             </ProtectedRoute>
           }
         />

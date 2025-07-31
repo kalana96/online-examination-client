@@ -96,9 +96,7 @@ function ExamEnrollment() {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Navigate to exam taking page
-      navigate(`/student/takingExam`);
-      //   navigate(`/student/takeingExam/${examId}`);
-      toast.success("Successfully enrolled in exam!");
+      navigate(`/student/takingExam/${id}`);
     } catch (error) {
       console.error("Error enrolling in exam:", error);
       toast.error("Failed to enroll in exam");
