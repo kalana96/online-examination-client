@@ -189,16 +189,34 @@ function TeacherStudent() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type and size
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file");
+      // Validate file type
+      const validImageTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        // "image/gif",
+        // "image/webp",
+      ];
+      if (!validImageTypes.includes(file.type)) {
+        toast.error("Please select a valid image file (JPEG, JPG, PNG)");
+        // Reset the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         return;
       }
 
-      // Check file size (5MB = 5 * 1024 * 1024 bytes)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("File size should not exceed 5MB.");
-        event.target.value = ""; // Reset the file input
+      // Check file size (3MB = 3 * 1024 * 1024 bytes)
+      const maxSizeInBytes = 3 * 1024 * 1024; // 3MB
+      if (file.size > maxSizeInBytes) {
+        const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+        toast.error(
+          `File size (${fileSizeInMB}MB) exceeds the 3MB limit. Please select a smaller image.`
+        );
+        // Reset the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         return;
       }
 
@@ -207,13 +225,28 @@ function TeacherStudent() {
       reader.onloadend = () => {
         setPreviewUrl(reader.result);
       };
+      reader.onerror = () => {
+        toast.error("Error reading the file. Please try again.");
+        // Reset the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      };
       reader.readAsDataURL(file);
 
       // Save file to state
-      setFormData({
-        ...formData,
-        profilePhoto: file, // Store the actual File object
-      });
+      setFormData((prevData) => ({
+        ...prevData,
+        profilePhoto: file,
+      }));
+
+      // Clear any previous file-related errors
+      if (formErrors.profilePhoto) {
+        setFormErrors((prev) => ({
+          ...prev,
+          profilePhoto: "",
+        }));
+      }
     }
   };
 
@@ -1041,16 +1074,29 @@ function TeacherStudent() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Profile Photo
+                <span className="text-xs text-gray-500 ml-2">
+                  (Max size: 3MB, Formats: JPEG, PNG)
+                </span>
               </label>
               <input
                 type="file"
-                name="profilePhoto"
-                id="profilePhoto"
+                name="profile_photo"
+                id="profile_photo"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                 ref={fileInputRef}
-                accept="image/*"
                 onChange={handleFileChange}
-                className="shadow appearance-none border rounded w-full md:w-1/2 lg:w-1/3 py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className={`shadow appearance-none border rounded w-full md:w-1/2 lg:w-1/3 py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
+                  formErrors.profilePhoto ? "border-red-500" : ""
+                }`}
               />
+              {formErrors.profilePhoto && (
+                <p className="text-red-500 text-xs italic mt-1">
+                  {formErrors.profilePhoto}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Supported formats: JPEG, PNG. Maximum file size: 3MB
+              </p>
             </div>
 
             {/* Submit */}

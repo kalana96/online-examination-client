@@ -4,16 +4,17 @@ class StudentService {
   // static BASE_URL = "http://localhost:1010";
   static BASE_URL = `${import.meta.env.VITE_API_BASE_URL}`;
 
-
   // Add Student
   static async addStudent(data, token) {
     try {
       const response = await axios.post(
-        `${StudentService.BASE_URL}saveStudent`,data,
+        `${StudentService.BASE_URL}saveStudent`,
+        data,
         {
-          headers: { Authorization: `Bearer ${token}`,
-          // 'Content-Type': 'multipart/form-data'
-         },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // 'Content-Type': 'multipart/form-data'
+          },
         }
       );
       return response.data;
@@ -28,59 +29,55 @@ class StudentService {
     }
   }
 
-
-    // Add Student
-    // static async addStudent(studentData) {
-    //   try {
-    //     const response = await this.axiosInstance.post('saveStudent', studentData);
-    //     // Return structured response for success cases
-    //     return {
-    //       success: true,
-    //       data: response.data,
-    //       status: response.status
-    //     };
-    //   } catch (error) {
-    //     // Handle different error scenarios
-    //     if (error.response) {
-    //       // Server responded with error status
-    //       return {
-    //         success: false,
-    //         data: error.response.data,
-    //         status: error.response.status,
-    //         error: error.response.data.message || 'Server error occurred'
-    //       };
-    //     } else if (error.request) {
-    //       // Network error
-    //       return {
-    //         success: false,
-    //         data: null,
-    //         status: null,
-    //         error: 'Network error - please check your connection'
-    //       };
-    //     } else {
-    //       // Other error
-    //       return {
-    //         success: false,
-    //         data: null,
-    //         status: null,
-    //         error: 'An unexpected error occurred'
-    //       };
-    //     }
-    //   }
-    // }
-
-
+  // Add Student
+  // static async addStudent(studentData) {
+  //   try {
+  //     const response = await this.axiosInstance.post('saveStudent', studentData);
+  //     // Return structured response for success cases
+  //     return {
+  //       success: true,
+  //       data: response.data,
+  //       status: response.status
+  //     };
+  //   } catch (error) {
+  //     // Handle different error scenarios
+  //     if (error.response) {
+  //       // Server responded with error status
+  //       return {
+  //         success: false,
+  //         data: error.response.data,
+  //         status: error.response.status,
+  //         error: error.response.data.message || 'Server error occurred'
+  //       };
+  //     } else if (error.request) {
+  //       // Network error
+  //       return {
+  //         success: false,
+  //         data: null,
+  //         status: null,
+  //         error: 'Network error - please check your connection'
+  //       };
+  //     } else {
+  //       // Other error
+  //       return {
+  //         success: false,
+  //         data: null,
+  //         status: null,
+  //         error: 'An unexpected error occurred'
+  //       };
+  //     }
+  //   }
+  // }
 
   // Update Student
-  
-  
+
   static async updateStudent(data, token) {
     try {
       const response = await axios.put(
         `${StudentService.BASE_URL}/api/v1/admin/updateStudent`,
         data,
         {
-          headers: { Authorization: `Bearer ${token}`, },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       return response.data;
@@ -95,13 +92,13 @@ class StudentService {
     }
   }
 
-   static async updateStudent1(data, token) {
+  static async updateStudent1(data, token) {
     try {
       const response = await axios.put(
         `${StudentService.BASE_URL}/api/v1/admin/updateStudentProfile`,
         data,
         {
-          headers: { Authorization: `Bearer ${token}`, },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       return response.data;
@@ -118,7 +115,6 @@ class StudentService {
 
   // Convenience method for updating admin (handles partial updates)
   static async updateStudentProfile(adminData, token) {
-
     try {
       const payload = {
         id: adminData.id.toString().trim(),
@@ -129,16 +125,16 @@ class StudentService {
         dob: adminData.dateOfBirth?.trim() || "",
         email: adminData.email?.trim().toLowerCase() || "",
         contactNo: adminData.contactNo?.trim() || null,
-        address: adminData.address?.trim() || null
+        address: adminData.address?.trim() || null,
       };
 
-       // Add user details if username or password is provided
+      // Add user details if username or password is provided
       if (adminData.username || adminData.password) {
-          payload.userDetails = {
-              username: adminData.username?.trim() || "",
-              password: adminData.password || "",
-              role: "ADMIN"
-          };
+        payload.userDetails = {
+          username: adminData.username?.trim() || "",
+          password: adminData.password || "",
+          role: "ADMIN",
+        };
       }
 
       // Create FormData
@@ -147,22 +143,23 @@ class StudentService {
 
       // Add user details as separate JSON if needed
       if (payload.userDetails) {
-          formDataToSend.append("userDetails", JSON.stringify(payload.userDetails));
+        formDataToSend.append(
+          "userDetails",
+          JSON.stringify(payload.userDetails)
+        );
       }
 
       // Add profile photo if provided
       if (adminData.profilePhoto && adminData.profilePhoto instanceof File) {
-          formDataToSend.append("profilePhoto", adminData.profilePhoto);
+        formDataToSend.append("profilePhoto", adminData.profilePhoto);
       }
       console.log("Payload being sent:", payload);
 
       return this.updateStudent1(formDataToSend, token);
-
     } catch (error) {
       console.error("Error in updateAdminProfile:", error);
       throw error;
     }
-
   }
 
   // Delete Student by ID
@@ -196,42 +193,45 @@ class StudentService {
   }
 
   // Get Students by ID
-  static async getStudentById(id, token){
-    try{
-        const response = await axios.get(`${StudentService.BASE_URL}/api/v1/admin/searchStudent/${id}`, 
+  static async getStudentById(id, token) {
+    try {
+      const response = await axios.get(
+        `${StudentService.BASE_URL}/api/v1/admin/searchStudent/${id}`,
         {
-            headers: {Authorization: `Bearer ${token}`}
-        })
-        return response.data;
-    }catch(err){
-        throw err;
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (err) {
+      throw err;
     }
-}
+  }
 
- static async getStudentByEmail(email, token){
-  
-    try{
-        const response = await axios.get(`${StudentService.BASE_URL}/api/v1/admin/getStudentByEmail/${email}`, 
+  static async getStudentByEmail(email, token) {
+    try {
+      const response = await axios.get(
+        `${StudentService.BASE_URL}/api/v1/admin/getStudentByEmail/${email}`,
         {
-            headers: {Authorization: `Bearer ${token}`}
-        })
-        return response.data;
-    }catch(err){
-        throw err;
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (err) {
+      throw err;
     }
-}
-
-
+  }
 
   // Add Student By Teacher
   static async addStudentByTeacher(data, token) {
     try {
       const response = await axios.post(
-        `${StudentService.BASE_URL}/api/v1/teacher/saveStudent`,data,
+        `${StudentService.BASE_URL}/api/v1/teacher/saveStudent`,
+        data,
         {
-          headers: { Authorization: `Bearer ${token}`,
-          // 'Content-Type': 'multipart/form-data'
-         },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // 'Content-Type': 'multipart/form-data'
+          },
         }
       );
       return response.data;
@@ -246,15 +246,16 @@ class StudentService {
     }
   }
 
-   // Add Student By Teacher
+  // Add Student By Teacher
   static async getStudentsByClass(classId, token) {
     try {
       const response = await axios.get(
         `${StudentService.BASE_URL}/api/v1/teacher/getStudentByClass/${classId}`,
         {
-          headers: { Authorization: `Bearer ${token}`,
-          // 'Content-Type': 'multipart/form-data'
-         },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // 'Content-Type': 'multipart/form-data'
+          },
         }
       );
       return response.data;
@@ -269,8 +270,72 @@ class StudentService {
     }
   }
 
+  // Teacher Edit Student
+  static async editStudentByTeacher(data, token) {
+    try {
+      const response = await axios.put(
+        `${StudentService.BASE_URL}/api/v1/teacher/editStudent`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // 'Content-Type': 'multipart/form-data'
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      // Return error response data for ALL HTTP error status codes
+      if (error.response) {
+        // Server responded with an error status (4xx, 5xx)
+        return error.response.data;
+      }
+      // For network errors or other issues, throw them
+      throw error;
+    }
+  }
 
-  
+  // Get Student Profile by Teacher
+  static async getStudentProfileByTeacher(id, token) {
+    try {
+      const response = await axios.get(
+        `${StudentService.BASE_URL}/api/v1/teacher/getStudentProfile/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      // Return error response data for ALL HTTP error status codes
+      if (error.response) {
+        // Server responded with an error status (4xx, 5xx)
+        return error.response.data;
+      }
+      // For network errors or other issues, throw them
+      throw error;
+    }
+  }
+
+  //Delete student by teacher
+  static async deleteStudentByTeacher(id, token) {
+    try {
+      const response = await axios.delete(
+        `${StudentService.BASE_URL}/api/v1/teacher/deleteStudent/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      // Return error response data for ALL HTTP error status codes
+      if (error.response) {
+        // Server responded with an error status (4xx, 5xx)
+        return error.response.data;
+      }
+      // For network errors or other issues, throw them
+      throw error;
+    }
+  }
 }
 
 export default StudentService;

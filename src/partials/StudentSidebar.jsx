@@ -158,7 +158,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
               {/* class */}
               <li
                 className={`pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-[linear-gradient(135deg,var(--tw-gradient-stops))] ${
-                  pathname.includes("class") &&
+                  pathname.includes("myClasses") &&
                   "from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]"
                 }`}
               >
@@ -166,7 +166,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   end
                   to="/student/myClasses"
                   className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                    pathname.includes("class")
+                    pathname.includes("myClasses")
                       ? ""
                       : "hover:text-gray-900 dark:hover:text-white"
                   }`}
@@ -174,7 +174,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   <div className="flex items-center">
                     <svg
                       className={`shrink-0 fill-current ${
-                        pathname.includes("class")
+                        pathname.includes("myClasses")
                           ? "text-violet-500"
                           : "text-gray-400 dark:text-gray-500"
                       }`}
@@ -255,7 +255,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                           <div className="flex items-center">
                             <svg
                               className={`shrink-0 fill-current ${
-                                pathname.includes("student")
+                                pathname.includes("exam")
                                   ? "text-violet-500"
                                   : "text-gray-400 dark:text-gray-500"
                               }`}
@@ -290,7 +290,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                           <li className="mb-1 last:mb-0">
                             <NavLink
                               end
-                              to="/student/upcomingExam"
+                              to="/student/examUpcoming"
                               className={({ isActive }) =>
                                 "block transition duration-150 truncate " +
                                 (isActive
@@ -306,7 +306,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                           <li className="mb-1 last:mb-0">
                             <NavLink
                               end
-                              to="/student/todayExam"
+                              to="/student/examToday"
                               className={({ isActive }) =>
                                 "block transition duration-150 truncate " +
                                 (isActive
@@ -319,6 +319,22 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                               </span>
                             </NavLink>
                           </li>
+                          <li className="mb-1 last:mb-0">
+                            <NavLink
+                              end
+                              to="/student/examCompleted"
+                              className={({ isActive }) =>
+                                "block transition duration-150 truncate " +
+                                (isActive
+                                  ? "text-violet-500"
+                                  : "text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")
+                              }
+                            >
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                Completed Exam
+                              </span>
+                            </NavLink>
+                          </li>
                         </ul>
                       </div>
                     </React.Fragment>
@@ -326,18 +342,18 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                 }}
               </SidebarLinkGroup>
 
-              {/* Exam Application */}
+              {/*Result */}
               <li
                 className={`pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-[linear-gradient(135deg,var(--tw-gradient-stops))] ${
-                  pathname.includes("application") &&
+                  pathname.includes("result") &&
                   "from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]"
                 }`}
               >
                 <NavLink
                   end
-                  to="/student"
+                  to="/student/result"
                   className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                    pathname.includes("application")
+                    pathname.includes("result")
                       ? ""
                       : "hover:text-gray-900 dark:hover:text-white"
                   }`}
@@ -374,7 +390,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
               >
                 <NavLink
                   end
-                  to="/student"
+                  to="/student/messages"
                   className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
                     pathname.includes("messages")
                       ? ""

@@ -152,7 +152,7 @@ function StudentList() {
           <div className="flex flex-wrap gap-4 mb-6">
             <button
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center"
-              onClick={() => navigate("/admin/addStudent")}
+              onClick={() => navigate("/admin/studentAdd")}
             >
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
               Add Student

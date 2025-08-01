@@ -13,7 +13,7 @@ class ClassService {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
         }
       );
@@ -38,7 +38,7 @@ class ClassService {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
         }
       );
@@ -180,10 +180,6 @@ class ClassService {
     }
   }
 
-
-
-
-
   // Get All Classes associated with Student
   static async getClassesByStudent(studentId, token) {
     try {
@@ -205,8 +201,7 @@ class ClassService {
     }
   }
 
-
-    // Get All Classes associated with teacher
+  // Get All Classes associated with teacher
   static async getClassesByTeacher(teacherId, token) {
     try {
       const response = await axios.get(
@@ -269,7 +264,7 @@ class ClassService {
     }
   }
 
-   // Update Class Bt Teacher
+  // Update Class Bt Teacher
   static async updateClassByTeacher(data, token) {
     try {
       const response = await axios.put(
@@ -278,7 +273,7 @@ class ClassService {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
         }
       );
@@ -294,7 +289,7 @@ class ClassService {
     }
   }
 
-   // Get Class by Teacher
+  // Get Class by Teacher
   static async getClassById(id, token) {
     try {
       const response = await axios.get(
@@ -314,9 +309,6 @@ class ClassService {
       throw error;
     }
   }
-
-
-
 }
 
 export default ClassService;

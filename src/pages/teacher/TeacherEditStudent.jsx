@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Header from "../../partials/Header";
-import Sidebar from "../../partials/Sidebar";
+import Sidebar from "../../partials/TeacherSidebar";
 import { useNavigate } from "react-router-dom";
 import StudentService from "../../service/StudentService";
 import ClassService from "../../service/ClassService";
@@ -15,12 +15,15 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import GradeService from "../../service/GradeService";
 
-function EditStudent() {
+function TeacherEditStudent() {
   const navigate = useNavigate();
   const { id } = useParams(); // Get the student ID from the URL
 
   // Retrieve token from local storage for authentication
   const token = localStorage.getItem("token");
+
+  // Retrieve Teacher ID from local storage
+  const teacherId = localStorage.getItem("id");
 
   // State to hold the form data
   const [formData, setFormData] = useState({
@@ -93,7 +96,7 @@ function EditStudent() {
     }
   }, [id]);
 
-  // Add this useEffect to handle outside clicks
+  //useEffect to handle outside clicks
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -134,7 +137,7 @@ function EditStudent() {
   const fetchData = async () => {
     try {
       //Fetch class
-      const classResponse = await ClassService.getAllClasses(token);
+      const classResponse = await ClassService.getClasses(teacherId, token);
       if (classResponse.code === "00") {
         setClasses(classResponse.content); // Populate the classes state with the fetched data
       } else {
@@ -147,7 +150,7 @@ function EditStudent() {
     }
 
     try {
-      const gradeRes = await GradeService.getAllGrades(token);
+      const gradeRes = await GradeService.getAllGradesForTeacher(token);
       if (gradeRes.code === "00") {
         setGrades(gradeRes.content); // Populate the Grades state with the fetched data
       } else {
@@ -161,7 +164,10 @@ function EditStudent() {
   // get Student Data
   const fetchStudent = async (id) => {
     try {
-      const response = await StudentService.getStudentById(id, token);
+      const response = await StudentService.getStudentProfileByTeacher(
+        id,
+        token
+      );
 
       if (response.code === "00") {
         const student = response.content;
@@ -327,7 +333,7 @@ function EditStudent() {
 
   // Handle back button
   const handleBack = () => {
-    navigate("/admin/studentList");
+    navigate("/teacher/studentList");
   };
 
   // Function to validate form inputs
@@ -485,7 +491,7 @@ function EditStudent() {
         formDataToSend.append("profilePhoto", formData.profilePhoto);
       }
 
-      const response = await StudentService.updateStudent(
+      const response = await StudentService.editStudentByTeacher(
         formDataToSend,
         token
       ); // Ensure token is valid
@@ -513,7 +519,7 @@ function EditStudent() {
     switch (response.code) {
       case "00": // VarList.RES_SUCCESS
         toast.success("Student updated successfully!");
-        navigate("/admin/studentList");
+        handleBack();
         break;
       case "05": // VarList.RES_ERROR
         toast.error("Please enter valid student data");
@@ -1246,4 +1252,4 @@ function EditStudent() {
   );
 }
 
-export default EditStudent;
+export default TeacherEditStudent;

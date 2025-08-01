@@ -47,6 +47,7 @@ import ExamEnrollment from "./pages/student/ExamEnrollment";
 import TakingExam from "./pages/student/TakingExam";
 import ResultProcess from "./pages/teacher/ResultProcess";
 import ExamSubmissionPage from "./pages/student/ExamSubmissionPage";
+import TeacherEditStudent from "./pages/teacher/TeacherEditStudent";
 
 function App() {
   const location = useLocation();
@@ -89,7 +90,7 @@ function App() {
           }
         />
         <Route
-          path="/admin/addClass"
+          path="/admin/classAdd"
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
               <AddClass />
@@ -105,7 +106,7 @@ function App() {
           }
         />
         <Route
-          path="/admin/addStudent"
+          path="/admin/studentAdd"
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
               <AddStudent />
@@ -145,7 +146,7 @@ function App() {
           }
         />
         <Route
-          path="/admin/addTeacher"
+          path="/admin/teacherAdd"
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
               <AddTeacher />
@@ -195,7 +196,7 @@ function App() {
           }
         />
         <Route
-          path="/student/upcomingExam"
+          path="/student/examUpcoming"
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
               <StudentUpcomingExam />
@@ -203,7 +204,7 @@ function App() {
           }
         />
         <Route
-          path="/student/todayExam"
+          path="/student/examToday"
           element={
             <ProtectedRoute allowedRoles={["STUDENT"]}>
               <StudentTodayExam />
@@ -325,7 +326,7 @@ function App() {
           }
         />
         <Route
-          path="/teacher/addStudent"
+          path="/teacher/studentAdd"
           element={
             <ProtectedRoute allowedRoles={["TEACHER"]}>
               <TeacherStudent />
@@ -369,6 +370,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["TEACHER"]}>
               <ResultProcess />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/editStudent/:id"
+          element={
+            <ProtectedRoute allowedRoles={["TEACHER"]}>
+              <TeacherEditStudent />
             </ProtectedRoute>
           }
         />

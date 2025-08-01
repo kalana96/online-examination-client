@@ -10,6 +10,8 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
   const trigger = useRef(null);
   const sidebar = useRef(null);
 
+  // const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
   const storedSidebarExpanded = localStorage.getItem("sidebar-expanded");
   const [sidebarExpanded, setSidebarExpanded] = useState(
     storedSidebarExpanded === null ? false : storedSidebarExpanded === "true"
@@ -49,6 +51,14 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
       document.querySelector("body").classList.remove("sidebar-expanded");
     }
   }, [sidebarExpanded]);
+
+  // useEffect(() => {
+  //   if (sidebarExpanded) {
+  //     document.querySelector("body")?.classList.add("sidebar-expanded");
+  //   } else {
+  //     document.querySelector("body")?.classList.remove("sidebar-expanded");
+  //   }
+  // }, [sidebarExpanded]);
 
   return (
     <div className="min-w-fit">
@@ -166,7 +176,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   end
                   to="/teacher/subject"
                   className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                    pathname.includes("class")
+                    pathname.includes("subject")
                       ? ""
                       : "hover:text-gray-900 dark:hover:text-white"
                   }`}
@@ -197,7 +207,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
               {/* Class */}
               <li
                 className={`pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-[linear-gradient(135deg,var(--tw-gradient-stops))] ${
-                  pathname.includes("application") &&
+                  pathname.includes("class") &&
                   "from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]"
                 }`}
               >
@@ -205,7 +215,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   end
                   to="/teacher/class"
                   className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                    pathname.includes("application")
+                    pathname.includes("class")
                       ? ""
                       : "hover:text-gray-900 dark:hover:text-white"
                   }`}
@@ -213,7 +223,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   <div className="flex items-center">
                     <svg
                       className={`shrink-0 fill-current ${
-                        pathname.includes("application")
+                        pathname.includes("class")
                           ? "text-violet-500"
                           : "text-gray-400 dark:text-gray-500"
                       }`}
@@ -290,7 +300,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                           <li className="mb-1 last:mb-0">
                             <NavLink
                               end
-                              to="/teacher/addStudent"
+                              to="/teacher/studentAdd"
                               className={({ isActive }) =>
                                 "block transition duration-150 truncate " +
                                 (isActive
@@ -326,108 +336,15 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                 }}
               </SidebarLinkGroup>
 
-              {/* Question Bank Management */}
-              <SidebarLinkGroup activecondition={pathname.includes("student")}>
-                {(handleClick, open) => {
-                  return (
-                    <React.Fragment>
-                      <a
-                        href="#0"
-                        className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                          pathname.includes("student")
-                            ? ""
-                            : "hover:text-gray-900 dark:hover:text-white"
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleClick();
-                          setSidebarExpanded(true);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <svg
-                              className={`shrink-0 fill-current ${
-                                pathname.includes("student")
-                                  ? "text-violet-500"
-                                  : "text-gray-400 dark:text-gray-500"
-                              }`}
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 16 16"
-                            >
-                              <path d="M5 4a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H5Z" />
-                              <path d="M4 0a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4H4ZM2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Z" />
-                              <path d="M4 0a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4H4ZM2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Z" />
-                            </svg>
-                            <span className="text-sm font-medium ml-4 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
-                              Question Bank
-                            </span>
-                          </div>
-                          {/* Icon */}
-                          <div className="flex shrink-0 ml-2">
-                            <svg
-                              className={`w-3 h-3 shrink-0 ml-1 fill-current text-gray-400 dark:text-gray-500 ${
-                                open && "rotate-180"
-                              }`}
-                              viewBox="0 0 12 12"
-                            >
-                              <path d="M5.9 11.4L.5 6l1.4-1.4 4 4 4-4L11.3 6z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </a>
-                      <div className="lg:hidden lg:sidebar-expanded:block 2xl:block">
-                        <ul className={`pl-8 mt-1 ${!open && "hidden"}`}>
-                          <li className="mb-1 last:mb-0">
-                            <NavLink
-                              end
-                              to="/teacher/questionBank"
-                              className={({ isActive }) =>
-                                "block transition duration-150 truncate " +
-                                (isActive
-                                  ? "text-violet-500"
-                                  : "text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")
-                              }
-                            >
-                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
-                                Question Bank
-                              </span>
-                            </NavLink>
-                          </li>
-                          <li className="mb-1 last:mb-0">
-                            <NavLink
-                              end
-                              to="/teacher/examList"
-                              className={({ isActive }) =>
-                                "block transition duration-150 truncate " +
-                                (isActive
-                                  ? "text-violet-500"
-                                  : "text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")
-                              }
-                            >
-                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
-                                Exam List
-                              </span>
-                            </NavLink>
-                          </li>
-                        </ul>
-                      </div>
-                    </React.Fragment>
-                  );
-                }}
-              </SidebarLinkGroup>
-
               {/* Exam Management */}
-              <SidebarLinkGroup activecondition={pathname.includes("student")}>
+              <SidebarLinkGroup activecondition={pathname.includes("exam")}>
                 {(handleClick, open) => {
                   return (
                     <React.Fragment>
                       <a
                         href="#0"
                         className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                          pathname.includes("student")
+                          pathname.includes("exam")
                             ? ""
                             : "hover:text-gray-900 dark:hover:text-white"
                         }`}
@@ -441,7 +358,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                           <div className="flex items-center">
                             <svg
                               className={`shrink-0 fill-current ${
-                                pathname.includes("student")
+                                pathname.includes("exam")
                                   ? "text-violet-500"
                                   : "text-gray-400 dark:text-gray-500"
                               }`}
@@ -528,18 +445,18 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                 }}
               </SidebarLinkGroup>
 
-              {/* Live Exam */}
+              {/* Question Bank Management */}
               <li
                 className={`pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-[linear-gradient(135deg,var(--tw-gradient-stops))] ${
-                  pathname.includes("application") &&
+                  pathname.includes("questionBank") &&
                   "from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]"
                 }`}
               >
                 <NavLink
                   end
-                  to="/teacher/liveExam"
+                  to="/teacher/questionBank"
                   className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                    pathname.includes("application")
+                    pathname.includes("questionBank")
                       ? ""
                       : "hover:text-gray-900 dark:hover:text-white"
                   }`}
@@ -547,7 +464,46 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   <div className="flex items-center">
                     <svg
                       className={`shrink-0 fill-current ${
-                        pathname.includes("application")
+                        pathname.includes("questionBank")
+                          ? "text-violet-500"
+                          : "text-gray-400 dark:text-gray-500"
+                      }`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M5 4a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H5Z" />
+                      <path d="M4 0a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4H4ZM2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Z" />
+                      <path d="M4 0a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V4a4 4 0 0 0-4-4H4ZM2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Z" />
+                    </svg>
+                    <span className="text-sm font-medium ml-4 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                      Question Bank
+                    </span>
+                  </div>
+                </NavLink>
+              </li>
+
+              {/* Live Exam */}
+              <li
+                className={`pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-[linear-gradient(135deg,var(--tw-gradient-stops))] ${
+                  pathname.includes("liveExam") &&
+                  "from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]"
+                }`}
+              >
+                <NavLink
+                  end
+                  to="/teacher/liveExam"
+                  className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
+                    pathname.includes("liveExam")
+                      ? ""
+                      : "hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <svg
+                      className={`shrink-0 fill-current ${
+                        pathname.includes("liveExam")
                           ? "text-violet-500"
                           : "text-gray-400 dark:text-gray-500"
                       }`}
@@ -570,7 +526,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
               {/* Completed Exam */}
               <li
                 className={`pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-[linear-gradient(135deg,var(--tw-gradient-stops))] ${
-                  pathname.includes("application") &&
+                  pathname.includes("completedExam") &&
                   "from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]"
                 }`}
               >
@@ -578,7 +534,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   end
                   to="/teacher/completedExam"
                   className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                    pathname.includes("application")
+                    pathname.includes("completedExam")
                       ? ""
                       : "hover:text-gray-900 dark:hover:text-white"
                   }`}
@@ -586,7 +542,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   <div className="flex items-center">
                     <svg
                       className={`shrink-0 fill-current ${
-                        pathname.includes("application")
+                        pathname.includes("completedExam")
                           ? "text-violet-500"
                           : "text-gray-400 dark:text-gray-500"
                       }`}
@@ -609,7 +565,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
               {/* Result Processing */}
               <li
                 className={`pl-4 pr-3 py-2 rounded-lg mb-0.5 last:mb-0 bg-[linear-gradient(135deg,var(--tw-gradient-stops))] ${
-                  pathname.includes("application") &&
+                  pathname.includes("result") &&
                   "from-violet-500/[0.12] dark:from-violet-500/[0.24] to-violet-500/[0.04]"
                 }`}
               >
@@ -617,7 +573,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   end
                   to="/teacher/resultProcess"
                   className={`block text-gray-800 dark:text-gray-100 truncate transition duration-150 ${
-                    pathname.includes("application")
+                    pathname.includes("result")
                       ? ""
                       : "hover:text-gray-900 dark:hover:text-white"
                   }`}
@@ -625,7 +581,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                   <div className="flex items-center">
                     <svg
                       className={`shrink-0 fill-current ${
-                        pathname.includes("application")
+                        pathname.includes("result")
                           ? "text-violet-500"
                           : "text-gray-400 dark:text-gray-500"
                       }`}

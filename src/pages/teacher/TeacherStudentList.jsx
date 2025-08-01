@@ -328,23 +328,23 @@ function TeacherStudentList() {
 
   // Function to handle creating a new student
   const handleAddStudent = () => {
-    navigate("/teacher/addStudent");
+    navigate("/teacher/studentAdd");
   };
 
   // Function to open the Edit Form and set the selected student
-  const handleEdit = (studentId) => {
-    navigate(`/teacher/editStudent/${studentId}`);
+  const handleEdit = (id) => {
+    navigate(`/teacher/editStudent/${id}`);
   };
 
   // Function to delete a student with confirmation
-  const deleteStudent = async (studentId) => {
+  const deleteStudent = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this student? This action cannot be undone."
     );
     if (confirmDelete) {
       try {
         setLoading(true);
-        const response = await StudentService.deleteStudent(studentId, token);
+        const response = await StudentService.deleteStudentByTeacher(id, token);
         if (response.code === "00") {
           toast.success(response.message || "Student deleted successfully");
           // Refresh the list after deletion
