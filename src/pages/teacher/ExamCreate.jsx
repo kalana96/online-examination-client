@@ -13,6 +13,7 @@ import {
   faSave,
   faCalendarAlt,
   faClock,
+  faBell,
 } from "@fortawesome/free-solid-svg-icons";
 
 function ExamCreate() {
@@ -39,6 +40,11 @@ function ExamCreate() {
     teacherId: "",
     studentCount: "",
     proctoringStatus: "disabled", // enabled/disabled
+    emailNotification: {
+      sendNotification: false,
+      emailSubject: "",
+      emailMessage: "",
+    },
   });
 
   const [formErrors, setFormErrors] = useState({}); // State for holding validation errors
@@ -114,6 +120,11 @@ function ExamCreate() {
       teacherId: "",
       studentCount: "",
       proctoringStatus: "disabled",
+      emailNotification: {
+        sendNotification: false,
+        emailSubject: "",
+        emailMessage: "",
+      },
     });
     setFormErrors({}); // Clear validation errors
   };
@@ -189,6 +200,17 @@ function ExamCreate() {
     return isValid;
   };
 
+  // handleInputChange for nested email fields
+  const handleEmailNotificationChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      emailNotification: {
+        ...prev.emailNotification,
+        [field]: value,
+      },
+    }));
+  };
+
   // Function to handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -215,6 +237,17 @@ function ExamCreate() {
           ? parseInt(formData.studentCount)
           : null,
         proctoringStatus: formData.proctoringStatus,
+
+        // Update email notification payload structure
+        emailNotification: formData.emailNotification.sendNotification
+          ? {
+              sendNotification: true,
+              emailSubject:
+                formData.emailNotification.emailSubject?.trim() || null,
+              emailMessage:
+                formData.emailNotification.emailMessage?.trim() || null,
+            }
+          : null,
       };
 
       const response = await ExamService.scheduleExam(payload, token);
@@ -237,55 +270,51 @@ function ExamCreate() {
       return;
     }
 
-    if (response.data) {
-      const { code, message, content } = response.data;
+    const { code, message, content } = response;
 
-      switch (code) {
-        case "SUCCESS":
-          toast.success(message || "Exam scheduled successfully!");
+    switch (code) {
+      case "SUCCESS":
+        toast.success(message || "Exam scheduled successfully!");
 
-          // Reset form after successful submission
-          handleReset();
+        // Reset form after successful submission
+        handleReset();
 
-          // Redirect to exams list or dashboard
-          if (navigate) {
-            setTimeout(() => {
-              navigate("/teacher/examSchedule");
-            }, 2000);
-          }
-          break;
+        // Redirect to exams list or dashboard
+        if (navigate) {
+          setTimeout(() => {
+            navigate("/teacher/examSchedule");
+          }, 2000);
+        }
+        break;
 
-        case "INVALID_INPUT":
-          toast.error(message || "Invalid input data provided");
-          break;
+      case "INVALID_INPUT":
+        toast.error(message || "Invalid input data provided");
+        break;
 
-        case "DUPLICATE":
-          toast.error(
-            message ||
-              "An exam with this name already exists for the selected class"
-          );
-          break;
+      case "DUPLICATE":
+        toast.error(
+          message ||
+            "An exam with this name already exists for the selected class"
+        );
+        break;
 
-        case "CLASS_NOT_FOUND":
-          toast.error(message || "Selected class not found");
-          break;
+      case "CLASS_NOT_FOUND":
+        toast.error(message || "Selected class not found");
+        break;
 
-        case "TEACHER_NOT_FOUND":
-          toast.error(message || "Teacher not found");
-          break;
+      case "TEACHER_NOT_FOUND":
+        toast.error(message || "Teacher not found");
+        break;
 
-        case "INVALID_TEACHER_CLASS_ASSOCIATION":
-          toast.error(
-            message || "You are not authorized to schedule exams for this class"
-          );
-          break;
+      case "INVALID_TEACHER_CLASS_ASSOCIATION":
+        toast.error(
+          message || "You are not authorized to schedule exams for this class"
+        );
+        break;
 
-        default:
-          toast.error(message || "Failed to schedule exam");
-          break;
-      }
-    } else {
-      toast.error("Invalid response from server");
+      default:
+        toast.error(message || "Failed to schedule exam");
+        break;
     }
   };
 
@@ -649,6 +678,186 @@ function ExamCreate() {
                   <option value="disabled">Disabled</option>
                   <option value="enabled">Enabled</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Email Notification Settings */}
+            <div className="col-span-1 md:col-span-2">
+              <div className="bg-gray-50 p-4 rounded-lg border">
+                <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
+                  <FontAwesomeIcon
+                    icon={faBell}
+                    className="mr-2 text-blue-600"
+                  />
+                  Email Notification Settings
+                </h3>
+
+                {/* Send Email Notification Toggle */}
+                <div className="mb-4">
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      name="sendNotification"
+                      checked={formData.emailNotification.sendNotification}
+                      onChange={(e) =>
+                        handleEmailNotificationChange(
+                          "sendNotification",
+                          e.target.checked
+                        )
+                      }
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Send email notification to all students in the selected
+                      class
+                    </span>
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1 ml-7">
+                    Students will receive an email notification about the new
+                    exam
+                  </p>
+                </div>
+
+                {/* Email Configuration - Only show if notification is enabled */}
+                {formData.emailNotification.sendNotification && (
+                  <div className="space-y-4">
+                    {/* Custom Email Subject */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Subject (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        name="emailSubject"
+                        value={formData.emailNotification.emailSubject}
+                        onChange={(e) =>
+                          handleEmailNotificationChange(
+                            "emailSubject",
+                            e.target.value
+                          )
+                        }
+                        className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        placeholder="e.g., Important: Midterm Exam Scheduled"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Default: "New Exam Scheduled -{" "}
+                        {formData.examName || "[Exam Name]"}"
+                      </p>
+                    </div>
+
+                    {/* Custom Email Message */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Additional Email Message (Optional)
+                      </label>
+                      <textarea
+                        name="emailMessage"
+                        value={formData.emailNotification.emailMessage}
+                        onChange={(e) =>
+                          handleEmailNotificationChange(
+                            "emailMessage",
+                            e.target.value
+                          )
+                        }
+                        rows="4"
+                        className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        placeholder="e.g., Please ensure you are well-prepared for this exam. Review chapters 1-5 and practice problems. Good luck!"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This message will be included in addition to the exam
+                        details
+                      </p>
+                    </div>
+
+                    {/* Email Preview */}
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                      <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center">
+                        📧 Email Preview:
+                      </h4>
+                      <div className="text-sm text-blue-700">
+                        <p>
+                          <strong>To:</strong> All students in{" "}
+                          {formData.classId
+                            ? classes.find((c) => c.id == formData.classId)
+                                ?.className || "[Selected Class]"
+                            : "[Selected Class]"}
+                        </p>
+                        <p>
+                          <strong>Subject:</strong>{" "}
+                          {formData.emailNotification.emailSubject ||
+                            `New Exam Scheduled - ${
+                              formData.examName || "[Exam Name]"
+                            }`}
+                        </p>
+                        <div className="bg-white p-3 rounded border mt-2 text-gray-700 text-sm">
+                          <p>Dear Students,</p>
+                          <br />
+                          <p>
+                            A new exam has been scheduled. Please find the
+                            details below:
+                          </p>
+                          <br />
+                          <div className="bg-gray-50 p-2 rounded">
+                            <p>
+                              <strong>📝 Exam Name:</strong>{" "}
+                              {formData.examName || "[Exam Name]"}
+                            </p>
+                            <p>
+                              <strong>📚 Exam Type:</strong>{" "}
+                              {formData.examType || "[Exam Type]"}
+                            </p>
+                            <p>
+                              <strong>📅 Date:</strong>{" "}
+                              {formData.examDate || "[Date]"}
+                            </p>
+                            <p>
+                              <strong>⏰ Time:</strong>{" "}
+                              {formData.startTime || "[Start Time]"} -{" "}
+                              {formData.endTime || "[End Time]"}
+                            </p>
+                            <p>
+                              <strong>⏱️ Duration:</strong>{" "}
+                              {formData.duration || "[Duration]"} minutes
+                            </p>
+                            <p>
+                              <strong>💯 Maximum Marks:</strong>{" "}
+                              {formData.maxMark || "[Max Marks]"}
+                            </p>
+                            <p>
+                              <strong>✅ Pass Marks:</strong>{" "}
+                              {formData.passMark || "[Pass Marks]"}
+                            </p>
+                            {formData.instructions && (
+                              <p>
+                                <strong>📋 Instructions:</strong>{" "}
+                                {formData.instructions}
+                              </p>
+                            )}
+                          </div>
+                          <br />
+                          {formData.emailNotification.emailMessage && (
+                            <>
+                              <div className="border-l-4 border-blue-400 pl-3 italic">
+                                {formData.emailNotification.emailMessage}
+                              </div>
+                              <br />
+                            </>
+                          )}
+                          <p>
+                            Please log in to your student portal for more
+                            details and ensure you are prepared for the exam.
+                          </p>
+                          <br />
+                          <p>
+                            Best regards,
+                            <br />
+                            Your Teacher
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

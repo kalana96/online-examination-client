@@ -1,21 +1,22 @@
 import axios from "axios";
 
 // Base configuration for API calls
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1010/';
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:1010/";
 
 // Create axios instance with default configuration
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000, // 10 seconds timeout
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -35,8 +36,8 @@ apiClient.interceptors.response.use(
     // Handle common errors globally
     if (error.response?.status === 401) {
       // Unauthorized - redirect to login
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem("token");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }
@@ -53,7 +54,7 @@ class ExamService {
   //       `${ExamService.BASE_URL}api/v1/teacher/scheduleExam`,
   //       data,
   //       {
-  //         headers: { 
+  //         headers: {
   //           Authorization: `Bearer ${token}`,
   //           'Content-Type': 'application/json'
   //         },
@@ -81,43 +82,44 @@ class ExamService {
     try {
       // Validate required fields
       if (!examData) {
-        throw new Error('Exam data is required');
+        throw new Error("Exam data is required");
       }
 
-      // Prepare headers
       const headers = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
 
-      // Add authorization header if token is provided
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
 
       // Make API call to schedule exam
-      const response = await apiClient.post('api/v1/teacher/exam/scheduleExam', examData, {
-        headers,
-      });
+      const response = await apiClient.post(
+        "api/v1/teacher/exam/scheduleExam",
+        examData,
+        {
+          headers,
+        }
+      );
 
-      return response;
+      return response.data;
     } catch (error) {
-      console.error('Error scheduling exam:', error);
+      console.error("Error scheduling exam:", error);
       throw error;
     }
   }
-
 
   // Update an existing exam
   static async updateExam(examData, token) {
     try {
       // Validate required fields
       if (!examData) {
-        throw new Error('Exam data is required');
+        throw new Error("Exam data is required");
       }
 
       // Prepare headers
       const headers = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
 
       // Add authorization header if token is provided
@@ -126,13 +128,17 @@ class ExamService {
       }
 
       // Make API call to schedule exam
-      const response = await apiClient.put('api/v1/teacher/exam/updateExam', examData, {
-        headers,
-      });
+      const response = await apiClient.put(
+        "api/v1/teacher/exam/updateExam",
+        examData,
+        {
+          headers,
+        }
+      );
 
       return response;
     } catch (error) {
-      console.error('Error updating exam:', error);
+      console.error("Error updating exam:", error);
       throw error;
     }
   }
@@ -200,7 +206,7 @@ class ExamService {
     }
   }
 
-   // Get all exams for a specific teacher
+  // Get all exams for a specific teacher
   static async getCompletdeExamsByTeacher(teacherId, token) {
     try {
       const response = await axios.get(
@@ -305,7 +311,7 @@ class ExamService {
     }
   }
 
-   // Get all active exams
+  // Get all active exams
   static async getAllActiveExams(token) {
     try {
       const response = await axios.get(
@@ -396,259 +402,257 @@ class ExamService {
     }
   }
 
+  // ===== PUBLISH STATUS MANAGEMENT FUNCTIONS =====
 
-
-// ===== PUBLISH STATUS MANAGEMENT FUNCTIONS =====
-
-/**
- * Update exam publish status
- * @param {number} examId - The ID of the exam
- * @param {boolean} isPublished - The publish status to set
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data
- */
-static async updateExamPublishStatus(examId, isPublished, token) {
-  try {
-    const response = await axios.put(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/updateExamPublishStatus/${examId}`,
-      null,
-      {
-        params: { isPublished },
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Update exam publish status
+   * @param {number} examId - The ID of the exam
+   * @param {boolean} isPublished - The publish status to set
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data
+   */
+  static async updateExamPublishStatus(examId, isPublished, token) {
+    try {
+      const response = await axios.put(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/updateExamPublishStatus/${examId}`,
+        null,
+        {
+          params: { isPublished },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get all published exams
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing list of published exams
- */
-static async getAllPublishedExams(token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getAllPublishedExams`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get all published exams
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing list of published exams
+   */
+  static async getAllPublishedExams(token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getAllPublishedExams`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get all draft exams
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing list of draft exams
- */
-static async getAllDraftExams(token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getAllDraftExams`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get all draft exams
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing list of draft exams
+   */
+  static async getAllDraftExams(token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getAllDraftExams`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get published exams by teacher
- * @param {number} teacherId - The ID of the teacher
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing list of published exams for the teacher
- */
-static async getPublishedExamsByTeacher(teacherId, token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishedExamsByTeacher/${teacherId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get published exams by teacher
+   * @param {number} teacherId - The ID of the teacher
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing list of published exams for the teacher
+   */
+  static async getPublishedExamsByTeacher(teacherId, token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishedExamsByTeacher/${teacherId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get draft exams by teacher
- * @param {number} teacherId - The ID of the teacher
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing list of draft exams for the teacher
- */
-static async getDraftExamsByTeacher(teacherId, token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getDraftExamsByTeacher/${teacherId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get draft exams by teacher
+   * @param {number} teacherId - The ID of the teacher
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing list of draft exams for the teacher
+   */
+  static async getDraftExamsByTeacher(teacherId, token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getDraftExamsByTeacher/${teacherId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get published exams by class
- * @param {number} classId - The ID of the class
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing list of published exams for the class
- */
-static async getPublishedExamsByClass(classId, token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishedExamsByClass/${classId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get published exams by class
+   * @param {number} classId - The ID of the class
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing list of published exams for the class
+   */
+  static async getPublishedExamsByClass(classId, token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishedExamsByClass/${classId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get draft exams by class
- * @param {number} classId - The ID of the class
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing list of draft exams for the class
- */
-static async getDraftExamsByClass(classId, token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getDraftExamsByClass/${classId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get draft exams by class
+   * @param {number} classId - The ID of the class
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing list of draft exams for the class
+   */
+  static async getDraftExamsByClass(classId, token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getDraftExamsByClass/${classId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get published upcoming exams
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing list of published upcoming exams
- */
-static async getPublishedUpcomingExams(token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishedUpcomingExams`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get published upcoming exams
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing list of published upcoming exams
+   */
+  static async getPublishedUpcomingExams(token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishedUpcomingExams`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get published exams for today
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing list of published exams for today
- */
-static async getPublishedTodaysExams(token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishedTodaysExams`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get published exams for today
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing list of published exams for today
+   */
+  static async getPublishedTodaysExams(token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishedTodaysExams`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get exam statistics with publish status for a teacher
- * @param {number} teacherId - The ID of the teacher
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing exam statistics with publish status
- */
-static async getExamStatsWithPublishStatus(teacherId, token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getExamStatsWithPublishStatus/${teacherId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get exam statistics with publish status for a teacher
+   * @param {number} teacherId - The ID of the teacher
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing exam statistics with publish status
+   */
+  static async getExamStatsWithPublishStatus(teacherId, token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getExamStatsWithPublishStatus/${teacherId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Check if an exam can be published
- * @param {number} examId - The ID of the exam
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing whether the exam can be published
- */
-static async canPublishExam(examId, token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/canPublishExam/${examId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Check if an exam can be published
+   * @param {number} examId - The ID of the exam
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing whether the exam can be published
+   */
+  static async canPublishExam(examId, token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/canPublishExam/${examId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
-/**
- * Get publish status summary for a teacher
- * @param {number} teacherId - The ID of the teacher
- * @param {string} token - Authorization token
- * @returns {Promise<Object>} Response data containing publish status summary
- */
-static async getPublishStatusSummary(teacherId, token) {
-  try {
-    const response = await axios.get(
-      `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishStatusSummary/${teacherId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    return ExamService.handleApiError(error);
+  /**
+   * Get publish status summary for a teacher
+   * @param {number} teacherId - The ID of the teacher
+   * @param {string} token - Authorization token
+   * @returns {Promise<Object>} Response data containing publish status summary
+   */
+  static async getPublishStatusSummary(teacherId, token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/teacher/exam/getPublishStatusSummary/${teacherId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return ExamService.handleApiError(error);
+    }
   }
-}
 
   // Helper method to handle common request configuration
   static getRequestConfig(token, includeContentType = false) {
     const config = {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     };
-    
+
     if (includeContentType) {
-      config.headers['Content-Type'] = 'application/json';
+      config.headers["Content-Type"] = "application/json";
     }
-    
+
     return config;
   }
 
@@ -662,20 +666,19 @@ static async getPublishStatusSummary(teacherId, token) {
       return {
         code: "NETWORK_ERROR",
         message: "Network error. Please check your connection.",
-        content: null
+        content: null,
       };
     } else {
       // Something else happened
       return {
         code: "UNKNOWN_ERROR",
         message: "An unexpected error occurred.",
-        content: null
+        content: null,
       };
     }
   }
 
-
-   // Get upcoming exams for a teacher
+  // Get upcoming exams for a teacher
   static async getUpcomingExamsByStudent(studentId, token) {
     try {
       const response = await axios.get(
@@ -696,8 +699,7 @@ static async getPublishStatusSummary(teacherId, token) {
     }
   }
 
-
-   // Get today exams for a teacher
+  // Get today exams for a teacher
   static async getTodayExamsByStudent(studentId, token) {
     try {
       const response = await axios.get(
@@ -718,7 +720,7 @@ static async getPublishStatusSummary(teacherId, token) {
     }
   }
 
-    // Get exam details byStudent
+  // Get exam details byStudent
   static async getExamByStudent(examId, token) {
     try {
       const response = await axios.get(
@@ -738,15 +740,6 @@ static async getPublishStatusSummary(teacherId, token) {
       throw error;
     }
   }
-  
-  
-
-
-
-
-
-
-
 }
 
 export default ExamService;
