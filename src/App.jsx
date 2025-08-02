@@ -48,6 +48,8 @@ import TakingExam from "./pages/student/TakingExam";
 import ResultProcess from "./pages/teacher/ResultProcess";
 import ExamSubmissionPage from "./pages/student/ExamSubmissionPage";
 import TeacherEditStudent from "./pages/teacher/TeacherEditStudent";
+import ExamMarking from "./pages/teacher/ExamMarking";
+import StudentMarking from "./pages/teacher/StudentMarking";
 
 function App() {
   const location = useLocation();
@@ -378,6 +380,22 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["TEACHER"]}>
               <TeacherEditStudent />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/marking"
+          element={
+            <ProtectedRoute allowedRoles={["TEACHER"]}>
+              <ExamMarking />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/mark-attempt/:id"
+          element={
+            <ProtectedRoute allowedRoles={["TEACHER"]}>
+              <StudentMarking />
             </ProtectedRoute>
           }
         />

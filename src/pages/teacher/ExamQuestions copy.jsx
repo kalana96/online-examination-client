@@ -223,11 +223,8 @@ function ExamQuestions() {
             : [],
         correctAnswer:
           questionForm.questionType === "TRUE_FALSE"
-            ? questionForm.correctAnswer.toLowerCase() === "true"
-              ? "True"
-              : "False" // Normalize the answer
-            : // ? questionForm.correctAnswer // This will be "True" or "False" from the select
-              questionForm.correctAnswer.trim(),
+            ? questionForm.correctAnswer // This will be "True" or "False" from the select
+            : questionForm.correctAnswer.trim(),
         marks: questionForm.marks,
         explanation: questionForm.explanation.trim() || null,
         classId: exam.classId || exam.clazz?.id,
@@ -316,16 +313,8 @@ function ExamQuestions() {
           questionText: question.questionText,
           questionType: question.questionType,
           difficulty: question.difficulty || "MEDIUM",
-          options:
-            question.questionType === "TRUE_FALSE"
-              ? ["True", "False"]
-              : question.options || [],
-          correctAnswer:
-            question.questionType === "TRUE_FALSE"
-              ? question.correctAnswer.toLowerCase() === "true"
-                ? "True"
-                : "False"
-              : question.correctAnswer,
+          options: question.options || [],
+          correctAnswer: question.correctAnswer,
           marks: question.marks,
           explanation: question.explanation,
           classId: exam.classId || exam.clazz?.id,
@@ -389,10 +378,9 @@ function ExamQuestions() {
           : question.questionType === "TRUE_FALSE"
           ? ["True", "False"]
           : ["", "", "", ""],
-
       correctAnswer:
         question.questionType === "TRUE_FALSE"
-          ? question.correctAnswer // Keep as is (should be "True" or "False")
+          ? question.correctAnswer
           : question.correctAnswer,
 
       marks: question.marks,
@@ -1373,6 +1361,7 @@ function ExamQuestions() {
                         <h4 className="text-lg font-medium text-gray-800 mb-2">
                           {question.questionText}
                         </h4>
+
                         {question.questionType === "MULTIPLE_CHOICE" &&
                           question.options && (
                             <div className="ml-4 mb-2">
@@ -1404,59 +1393,16 @@ function ExamQuestions() {
                             </div>
                           )}
 
-                        {/* //NEW BLOCK RIGHT AFTER THE MULTIPLE_CHOICEBLOCK: */}
-                        {question.questionType === "TRUE_FALSE" && (
+                        {question.questionType !== "MULTIPLE_CHOICE" && (
                           <div className="ml-4 mb-2">
-                            <div className="flex items-center mb-1">
-                              <span className="text-gray-600 mr-2">A.</span>
-                              <span
-                                className={`${
-                                  "True" === question.correctAnswer
-                                    ? "font-semibold text-green-600"
-                                    : "text-gray-700"
-                                }`}
-                              >
-                                True
-                              </span>
-                              {"True" === question.correctAnswer && (
-                                <FontAwesomeIcon
-                                  icon={faCheck}
-                                  className="ml-2 text-green-600"
-                                />
-                              )}
-                            </div>
-                            <div className="flex items-center mb-1">
-                              <span className="text-gray-600 mr-2">B.</span>
-                              <span
-                                className={`${
-                                  "False" === question.correctAnswer
-                                    ? "font-semibold text-green-600"
-                                    : "text-gray-700"
-                                }`}
-                              >
-                                False
-                              </span>
-                              {"False" === question.correctAnswer && (
-                                <FontAwesomeIcon
-                                  icon={faCheck}
-                                  className="ml-2 text-green-600"
-                                />
-                              )}
-                            </div>
+                            <span className="text-sm text-gray-600">
+                              Correct Answer:{" "}
+                            </span>
+                            <span className="font-semibold text-green-600">
+                              {question.correctAnswer}
+                            </span>
                           </div>
                         )}
-
-                        {question.questionType !== "MULTIPLE_CHOICE" &&
-                          question.questionType !== "TRUE_FALSE" && (
-                            <div className="ml-4 mb-2">
-                              <span className="text-sm text-gray-600">
-                                Correct Answer:{" "}
-                              </span>
-                              <span className="font-semibold text-green-600">
-                                {question.correctAnswer}
-                              </span>
-                            </div>
-                          )}
 
                         {question.explanation && (
                           <div className="ml-4 mb-2">
