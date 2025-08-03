@@ -22,6 +22,107 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-toastify";
 
+const ConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  type = "default",
+  details = null,
+}) => {
+  if (!isOpen) return null;
+
+  const getTypeStyles = () => {
+    switch (type) {
+      case "delete":
+        return {
+          icon: "🗑️",
+          bgColor: "bg-red-50",
+          borderColor: "border-red-200",
+          titleColor: "text-red-800",
+          buttonColor: "bg-red-600 hover:bg-red-700",
+          iconBg: "bg-red-100",
+        };
+      case "publish":
+        return {
+          icon: "📢",
+          bgColor: "bg-green-50",
+          borderColor: "border-green-200",
+          titleColor: "text-green-800",
+          buttonColor: "bg-green-600 hover:bg-green-700",
+          iconBg: "bg-green-100",
+        };
+      case "unpublish":
+        return {
+          icon: "📝",
+          bgColor: "bg-orange-50",
+          borderColor: "border-orange-200",
+          titleColor: "text-orange-800",
+          buttonColor: "bg-orange-600 hover:bg-orange-700",
+          iconBg: "bg-orange-100",
+        };
+      default:
+        return {
+          icon: "❓",
+          bgColor: "bg-blue-50",
+          borderColor: "border-blue-200",
+          titleColor: "text-blue-800",
+          buttonColor: "bg-blue-600 hover:bg-blue-700",
+          iconBg: "bg-blue-100",
+        };
+    }
+  };
+
+  const styles = getTypeStyles();
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div
+        className={`${styles.bgColor} ${styles.borderColor} border-2 rounded-lg shadow-xl max-w-md w-full`}
+      >
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center mb-4">
+            <div className={`${styles.iconBg} rounded-full p-3 mr-4`}>
+              <span className="text-2xl">{styles.icon}</span>
+            </div>
+            <h3 className={`text-lg font-semibold ${styles.titleColor}`}>
+              {title}
+            </h3>
+          </div>
+
+          {/* Message */}
+          <p className="text-gray-700 mb-4 leading-relaxed">{message}</p>
+
+          {/* Details */}
+          {details && (
+            <div className="bg-white p-3 rounded border mb-4">
+              <div className="text-sm text-gray-600">{details}</div>
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex space-x-3 justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              className={`px-4 py-2 ${styles.buttonColor} text-white rounded transition-colors duration-200`}
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function ExamSchedule() {
   // State to hold the list of exams
   const [exams, setExams] = useState([]);
@@ -29,6 +130,15 @@ function ExamSchedule() {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [examQuestionCounts, setExamQuestionCounts] = useState({});
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "default",
+    title: "",
+    message: "",
+    details: null,
+    onConfirm: () => {},
+  });
 
   // Filter states
   const [selectedClass, setSelectedClass] = useState("");
@@ -337,6 +447,7 @@ function ExamSchedule() {
   // Function to toggle publish status
   const togglePublishStatus = async (examId, currentStatus) => {
     const questionCount = examQuestionCounts[examId] || 0;
+    const exam = exams.find((e) => e.id === examId);
 
     // Check if exam has questions when trying to publish
     if (!currentStatus && questionCount === 0) {
@@ -347,47 +458,91 @@ function ExamSchedule() {
     }
 
     const action = currentStatus ? "unpublish" : "publish";
-    const confirmMessage = `Are you sure you want to ${action} this exam?`;
+    const actionWord = currentStatus ? "Unpublish" : "Publish";
 
-    if (window.confirm(confirmMessage)) {
-      try {
-        setLoading(true);
+    // Create exam details for confirmation
+    const examDetails = exam ? (
+      <div className="space-y-2">
+        <div>
+          <strong>Exam:</strong> {exam.examName}
+        </div>
+        <div>
+          <strong>Class:</strong> {exam.clazz?.className || "N/A"}
+        </div>
+        <div>
+          <strong>Date:</strong> {formatDate(exam.examDate)}
+        </div>
+        <div>
+          <strong>Time:</strong> {formatTime(exam.startTime)}
+        </div>
+        <div>
+          <strong>Questions:</strong> {questionCount}
+        </div>
+        {!currentStatus && (
+          <div className="text-sm text-green-700 mt-2">
+            ✓ This exam will visible and notify students after publishing.
+          </div>
+        )}
+        {currentStatus && (
+          <div className="text-sm text-orange-700 mt-2">
+            ⚠️ Students will no longer be able to access this exam after
+            unpublishing.
+          </div>
+        )}
+      </div>
+    ) : null;
 
-        // Check if exam can be published (only when trying to publish)
-        if (!currentStatus) {
-          const canPublishResponse = await ExamService.canPublishExam(
+    setConfirmModal({
+      isOpen: true,
+      type: currentStatus ? "unpublish" : "publish",
+      title: `${actionWord} Exam`,
+      message: `Are you sure you want to ${action} this exam?`,
+      details: examDetails,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+
+        try {
+          setLoading(true);
+
+          // Check if exam can be published (only when trying to publish)
+          if (!currentStatus) {
+            const canPublishResponse = await ExamService.canPublishExam(
+              examId,
+              token
+            );
+            if (
+              canPublishResponse.code === "00" &&
+              !canPublishResponse.content
+            ) {
+              toast.error(
+                "This exam cannot be published. Please ensure all required fields are filled and the exam date is not in the past."
+              );
+              setLoading(false);
+              return;
+            }
+          }
+
+          const response = await ExamService.updateExamPublishStatus(
             examId,
+            !currentStatus,
             token
           );
-          if (canPublishResponse.code === "00" && !canPublishResponse.content) {
-            toast.error(
-              "This exam cannot be published. Please ensure all required fields are filled and the exam date is not in the past."
-            );
-            setLoading(false);
-            return;
+
+          if (response.code === "00") {
+            toast.success(`Exam ${action}ed successfully`);
+            fetchExams(); // Refresh the list after update
+          } else {
+            console.error(`Failed to ${action} exam`, response.message);
+            toast.error(response.message || `Failed to ${action} exam`);
           }
+        } catch (error) {
+          console.error(`Error ${action}ing exam:`, error);
+          toast.error(`Error ${action}ing exam`);
+        } finally {
+          setLoading(false);
         }
-
-        const response = await ExamService.updateExamPublishStatus(
-          examId,
-          !currentStatus,
-          token
-        );
-
-        if (response.code === "00") {
-          toast.success(`Exam ${action}ed successfully`);
-          fetchExams(); // Refresh the list after update
-        } else {
-          console.error(`Failed to ${action} exam`, response.message);
-          toast.error(response.message || `Failed to ${action} exam`);
-        }
-      } catch (error) {
-        console.error(`Error ${action}ing exam:`, error);
-        toast.error(`Error ${action}ing exam`);
-      } finally {
-        setLoading(false);
-      }
-    }
+      },
+    });
   };
 
   // Function to apply filters
@@ -405,9 +560,9 @@ function ExamSchedule() {
     if (selectedStatus) {
       filtered = filtered.filter((exam) => {
         if (selectedStatus === "published") {
-          return exam.isPublished === true;
+          return exam.published === true;
         } else if (selectedStatus === "draft") {
-          return exam.isPublished === false;
+          return exam.published === false;
         }
         return true;
       });
@@ -439,27 +594,62 @@ function ExamSchedule() {
 
   // Function to delete an exam with confirmation
   const deleteExam = async (examId) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this exam? This action cannot be undone."
-    );
-    if (confirmDelete) {
-      try {
-        setLoading(true);
-        const response = await ExamService.deleteExam(examId, token);
-        if (response.code === "00") {
-          toast.success(response.message || "Exam deleted successfully");
-          fetchExams(); // Refresh the list after deletion
-        } else {
-          console.error("Failed to delete exam", response.message);
-          toast.error(response.message || "Failed to delete exam");
+    const exam = exams.find((e) => e.id === examId);
+    const questionCount = examQuestionCounts[examId] || 0;
+
+    // Create exam details for confirmation
+    const examDetails = exam ? (
+      <div className="space-y-2">
+        <div>
+          <strong>Exam:</strong> {exam.examName}
+        </div>
+        <div>
+          <strong>Class:</strong> {exam.clazz?.className || "N/A"}
+        </div>
+        <div>
+          <strong>Date:</strong> {formatDate(exam.examDate)}
+        </div>
+        <div>
+          <strong>Status:</strong> {exam.published ? "Published" : "Draft"}
+        </div>
+        <div>
+          <strong>Questions:</strong> {questionCount}
+        </div>
+        <div className="text-sm text-red-700 mt-2 p-2 bg-red-50 rounded border border-red-200">
+          ⚠️ <strong>Warning:</strong> This action cannot be undone. All
+          associated questions and data will be permanently deleted.
+        </div>
+      </div>
+    ) : null;
+
+    setConfirmModal({
+      isOpen: true,
+      type: "delete",
+      title: "Delete Exam",
+      message:
+        "Are you sure you want to delete this exam? This will permanently remove the exam and all its associated data.",
+      details: examDetails,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+
+        try {
+          setLoading(true);
+          const response = await ExamService.deleteExam(examId, token);
+          if (response.code === "00") {
+            toast.success(response.message || "Exam deleted successfully");
+            fetchExams(); // Refresh the list after deletion
+          } else {
+            console.error("Failed to delete exam", response.message);
+            toast.error(response.message || "Failed to delete exam");
+          }
+        } catch (error) {
+          console.error("Error deleting exam:", error);
+          toast.error("Error deleting exam");
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Error deleting exam:", error);
-        toast.error("Error deleting exam");
-      } finally {
-        setLoading(false);
-      }
-    }
+      },
+    });
   };
 
   // Function to format date
@@ -476,6 +666,11 @@ function ExamSchedule() {
       console.error("Error formatting date:", error);
       return dateString;
     }
+  };
+
+  // function to close the confirmation modal
+  const closeConfirmModal = () => {
+    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
   };
 
   // Function to format time
@@ -623,6 +818,16 @@ function ExamSchedule() {
           </div>
         </main>
       </div>
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        type={confirmModal.type}
+      />
     </div>
   );
 }

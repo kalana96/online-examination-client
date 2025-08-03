@@ -57,6 +57,37 @@ function ExamCreate() {
     fetchData();
   }, [id]);
 
+  // Auto-calculate duration when both start and end times are set
+  useEffect(() => {
+    if (formData.startTime && formData.endTime) {
+      const startTime = new Date(`2000-01-01T${formData.startTime}`);
+      const endTime = new Date(`2000-01-01T${formData.endTime}`);
+
+      // Handle case where end time is on the next day
+      if (endTime < startTime) {
+        endTime.setDate(endTime.getDate() + 1);
+      }
+
+      const durationMs = endTime - startTime;
+      const durationMinutes = Math.floor(durationMs / (1000 * 60));
+
+      if (durationMinutes > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          duration: durationMinutes.toString(),
+        }));
+
+        // Clear duration error if it exists
+        if (formErrors.duration) {
+          setFormErrors((prev) => ({
+            ...prev,
+            duration: "",
+          }));
+        }
+      }
+    }
+  }, [formData.startTime, formData.endTime]);
+
   // Function to fetch subjects and teachers
   const fetchData = async () => {
     try {
@@ -149,6 +180,39 @@ function ExamCreate() {
       isValid = false;
     }
 
+    if (!formData.startTime) {
+      errors.startTime = "Start time is required.";
+      isValid = false;
+    }
+
+    if (!formData.endTime) {
+      errors.endTime = "End time is required.";
+      isValid = false;
+    }
+
+    // Validate time logic and duration
+    if (formData.startTime && formData.endTime) {
+      const startTime = new Date(`2000-01-01T${formData.startTime}`);
+      let endTime = new Date(`2000-01-01T${formData.endTime}`);
+
+      // Handle cross-day scenario
+      if (endTime <= startTime) {
+        endTime.setDate(endTime.getDate() + 1);
+      }
+
+      const durationMs = endTime - startTime;
+      const durationMinutes = Math.floor(durationMs / (1000 * 60));
+
+      if (durationMinutes <= 0) {
+        errors.endTime = "End time must be after start time.";
+        isValid = false;
+      } else if (durationMinutes > 1440) {
+        // More than 24 hours
+        errors.endTime = "Exam duration cannot exceed 24 hours.";
+        isValid = false;
+      }
+    }
+
     if (!formData.duration) {
       errors.duration = "Duration is required.";
       isValid = false;
@@ -176,25 +240,10 @@ function ExamCreate() {
       isValid = false;
     }
 
-    if (!formData.startTime) {
-      errors.startTime = "Start time is required.";
-      isValid = false;
-    }
-
-    if (!formData.endTime) {
-      errors.endTime = "End time is required.";
-      isValid = false;
-    }
-
     if (!formData.classId) {
       errors.classId = "Class is required.";
       isValid = false;
     }
-
-    // if (!formData.teacherId) {
-    //   errors.teacherId = "Teacher is required.";
-    //   isValid = false;
-    // }
 
     setFormErrors(errors);
     return isValid;
@@ -520,6 +569,9 @@ function ExamCreate() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <FontAwesomeIcon icon={faClock} className="mr-1" />
                   Duration (minutes) *
+                  <span className="text-xs text-blue-600 ml-2">
+                    (Auto-calculated)
+                  </span>
                 </label>
                 <input
                   type="number"
@@ -527,17 +579,27 @@ function ExamCreate() {
                   id="duration"
                   value={formData.duration}
                   onChange={handleInputChange}
-                  className={`shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
+                  className={`shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-50 ${
                     formErrors.duration ? "border-red-500" : ""
                   }`}
-                  placeholder="Enter duration in minutes"
+                  placeholder="Auto-calculated from start and end time"
                   min="1"
+                  readOnly
                 />
                 {formErrors.duration && (
                   <p className="text-red-500 text-xs italic mt-1">
                     {formErrors.duration}
                   </p>
                 )}
+                {formData.startTime &&
+                  formData.endTime &&
+                  formData.duration && (
+                    <p className="text-xs text-green-600 mt-1">
+                      ✓ Duration calculated: {formData.duration} minutes (
+                      {Math.floor(formData.duration / 60)}h{" "}
+                      {formData.duration % 60}m)
+                    </p>
+                  )}
               </div>
 
               {/* Maximum Marks */}

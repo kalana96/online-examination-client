@@ -50,6 +50,7 @@ import ExamSubmissionPage from "./pages/student/ExamSubmissionPage";
 import TeacherEditStudent from "./pages/teacher/TeacherEditStudent";
 import ExamMarking from "./pages/teacher/ExamMarking";
 import StudentMarking from "./pages/teacher/StudentMarking";
+import TeacherStudentView from "./pages/teacher/TeacherStudentView";
 
 function App() {
   const location = useLocation();
@@ -380,6 +381,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["TEACHER"]}>
               <TeacherEditStudent />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/viewStudent/:id"
+          element={
+            <ProtectedRoute allowedRoles={["TEACHER"]}>
+              <TeacherStudentView />
             </ProtectedRoute>
           }
         />

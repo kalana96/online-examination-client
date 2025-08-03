@@ -19,6 +19,7 @@ import {
   faVenus,
   faMars,
   faGenderless,
+  faEye, // Added for view button
 } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-toastify";
 
@@ -31,7 +32,8 @@ function TeacherStudentList() {
 
   // Filter states
   const [selectedClass, setSelectedClass] = useState("");
-  const [selectedGender, setSelectedGender] = useState("");
+  const [searchName, setSearchName] = useState("");
+  const [searchRegistration, setSearchRegistration] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
   const navigate = useNavigate();
@@ -85,6 +87,111 @@ function TeacherStudentList() {
     },
   };
 
+  // Column definitions for the data table
+  const columns = [
+    {
+      name: "#",
+      selector: (row, index) => index + 1,
+      sortable: false,
+      width: "50px",
+      cell: (row, index) => (
+        <div className="text-center w-full">{index + 1}</div>
+      ),
+    },
+    {
+      name: "Registration No",
+      selector: (row) => row.registrationNumber,
+      sortable: true,
+      width: "180px",
+      cell: (row) => (
+        <div className="font-medium text-gray-800">
+          {row.registrationNumber}
+        </div>
+      ),
+    },
+    {
+      name: "Full Name",
+      selector: (row) =>
+        `${row.firstName} ${row.middleName || ""} ${row.lastName}`.trim(),
+      sortable: true,
+      // width: "280px",
+      cell: (row) => (
+        <div className="flex items-center">
+          <FontAwesomeIcon icon={faUser} className="mr-2 text-gray-500" />
+          <div className="font-medium text-gray-800">
+            {`${row.firstName} ${row.middleName || ""} ${row.lastName}`.trim()}
+          </div>
+        </div>
+      ),
+    },
+    {
+      name: "Email",
+      selector: (row) => row.email,
+      sortable: true,
+      width: "260px",
+      cell: (row) => (
+        <div className="flex items-center text-gray-600">
+          <FontAwesomeIcon icon={faEnvelope} className="mr-2 text-blue-500" />
+          <div className="truncate">{row.email || "N/A"}</div>
+        </div>
+      ),
+    },
+    {
+      name: "Contact",
+      selector: (row) => row.contactNo,
+      sortable: true,
+      width: "160px",
+      cell: (row) => (
+        <div className="flex items-center text-gray-600">
+          <FontAwesomeIcon icon={faPhone} className="mr-2 text-green-500" />
+          <div>{row.contactNo || "N/A"}</div>
+        </div>
+      ),
+    },
+    {
+      name: "Gender",
+      selector: (row) => row.gender,
+      sortable: true,
+      width: "120px",
+      cell: (row) => (
+        <div className={`flex items-center ${getGenderColor(row.gender)}`}>
+          <FontAwesomeIcon icon={getGenderIcon(row.gender)} className="mr-2" />
+          <div>{row.gender || "N/A"}</div>
+        </div>
+      ),
+    },
+    {
+      name: "Actions",
+      ignoreRowClick: true,
+      width: "200px", // Increased width to accommodate view button
+      cell: (row) => (
+        <div className="flex space-x-2">
+          <button
+            className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50 transition-colors duration-200"
+            onClick={() => handleView(row.id)}
+            title="View Student Details"
+          >
+            <FontAwesomeIcon icon={faEye} />
+          </button>
+          <button
+            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors duration-200"
+            onClick={() => handleEdit(row.id)}
+            title="Edit Student"
+          >
+            <FontAwesomeIcon icon={faEdit} />
+          </button>
+          <button
+            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors duration-200"
+            onClick={() => deleteStudent(row.id)}
+            title="Delete Student"
+          >
+            <FontAwesomeIcon icon={faTrashAlt} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   // Function to get gender icon
   const getGenderIcon = (gender) => {
     switch (gender?.toLowerCase()) {
@@ -120,138 +227,6 @@ function TeacherStudentList() {
     });
   };
 
-  // Column definitions for the data table
-  const columns = [
-    {
-      name: "#",
-      selector: (row, index) => index + 1,
-      sortable: false,
-      width: "50px",
-      cell: (row, index) => (
-        <div className="text-center w-full">{index + 1}</div>
-      ),
-    },
-    {
-      name: "Registration No",
-      selector: (row) => row.registrationNumber,
-      sortable: true,
-      width: "180px",
-      cell: (row) => (
-        <div className="font-medium text-gray-800">
-          {row.registrationNumber}
-        </div>
-      ),
-    },
-    {
-      name: "Full Name",
-      selector: (row) =>
-        `${row.firstName} ${row.middleName || ""} ${row.lastName}`.trim(),
-      sortable: true,
-      width: "280px",
-      cell: (row) => (
-        <div className="flex items-center">
-          <FontAwesomeIcon icon={faUser} className="mr-2 text-gray-500" />
-          <div className="font-medium text-gray-800">
-            {`${row.firstName} ${row.middleName || ""} ${row.lastName}`.trim()}
-          </div>
-        </div>
-      ),
-    },
-    // {
-    //   name: "Class",
-    //   selector: (row) => row.className,
-    //   sortable: true,
-    //   width: "150px",
-    //   cell: (row) => (
-    //     <div className="text-gray-600">{row.className || "N/A"}</div>
-    //   ),
-    // },
-    {
-      name: "Email",
-      selector: (row) => row.email,
-      sortable: true,
-      width: "200px",
-      cell: (row) => (
-        <div className="flex items-center text-gray-600">
-          <FontAwesomeIcon icon={faEnvelope} className="mr-2 text-blue-500" />
-          <div className="truncate">{row.email || "N/A"}</div>
-        </div>
-      ),
-    },
-    {
-      name: "Contact",
-      selector: (row) => row.contactNo,
-      sortable: true,
-      width: "140px",
-      cell: (row) => (
-        <div className="flex items-center text-gray-600">
-          <FontAwesomeIcon icon={faPhone} className="mr-2 text-green-500" />
-          <div>{row.contactNo || "N/A"}</div>
-        </div>
-      ),
-    },
-    // {
-    //   name: "Age",
-    //   selector: (row) => row.age,
-    //   sortable: true,
-    //   width: "80px",
-    //   cell: (row) => (
-    //     <div className="text-gray-600 text-center">{row.age || "N/A"}</div>
-    //   ),
-    // },
-    {
-      name: "Gender",
-      selector: (row) => row.gender,
-      sortable: true,
-      width: "100px",
-      cell: (row) => (
-        <div className={`flex items-center ${getGenderColor(row.gender)}`}>
-          <FontAwesomeIcon icon={getGenderIcon(row.gender)} className="mr-2" />
-          <div>{row.gender || "N/A"}</div>
-        </div>
-      ),
-    },
-    {
-      name: "DOB",
-      selector: (row) => row.dob,
-      sortable: true,
-      width: "150px",
-      cell: (row) => (
-        <div className="text-gray-600 flex items-center">
-          <FontAwesomeIcon
-            icon={faCalendarAlt}
-            className="mr-2 text-orange-500"
-          />
-          <div>{formatDate(row.dob)}</div>
-        </div>
-      ),
-    },
-
-    {
-      name: "Actions",
-      ignoreRowClick: true,
-      width: "150px",
-      cell: (row) => (
-        <div className="flex space-x-2">
-          <button
-            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors duration-200"
-            onClick={() => handleEdit(row.id)}
-            title="Edit Student"
-          >
-            <FontAwesomeIcon icon={faEdit} />
-          </button>
-          <button
-            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors duration-200"
-            onClick={() => deleteStudent(row.id)}
-            title="Delete Student"
-          >
-            <FontAwesomeIcon icon={faTrashAlt} />
-          </button>
-        </div>
-      ),
-    },
-  ];
-
   // Fetch classes on component mount
   useEffect(() => {
     fetchClasses();
@@ -260,7 +235,7 @@ function TeacherStudentList() {
   // Apply filters when students or filter values change
   useEffect(() => {
     applyFilters();
-  }, [students, selectedClass, selectedGender]);
+  }, [students, selectedClass, searchName, searchRegistration]);
 
   // Function to fetch students by class
   const fetchStudentsByClass = async (classId) => {
@@ -308,11 +283,24 @@ function TeacherStudentList() {
   const applyFilters = () => {
     let filtered = [...students];
 
-    // Filter by gender
-    if (selectedGender) {
-      filtered = filtered.filter(
-        (student) =>
-          student.gender?.toLowerCase() === selectedGender.toLowerCase()
+    // Filter by student name
+    if (searchName.trim()) {
+      filtered = filtered.filter((student) => {
+        const fullName = `${student.firstName} ${student.middleName || ""} ${
+          student.lastName
+        }`
+          .trim()
+          .toLowerCase();
+        return fullName.includes(searchName.toLowerCase());
+      });
+    }
+
+    // Filter by registration number
+    if (searchRegistration.trim()) {
+      filtered = filtered.filter((student) =>
+        student.registrationNumber
+          ?.toLowerCase()
+          .includes(searchRegistration.toLowerCase())
       );
     }
 
@@ -322,13 +310,19 @@ function TeacherStudentList() {
   // Function to clear all filters
   const clearFilters = () => {
     setSelectedClass("");
-    setSelectedGender("");
+    setSearchName("");
+    setSearchRegistration("");
     setStudents([]);
   };
 
   // Function to handle creating a new student
   const handleAddStudent = () => {
     navigate("/teacher/studentAdd");
+  };
+
+  // Function to handle viewing student details
+  const handleView = (id) => {
+    navigate(`/teacher/viewStudent/${id}`);
   };
 
   // Function to open the Edit Form and set the selected student
@@ -412,7 +406,7 @@ function TeacherStudentList() {
               {showFilters ? "Hide Filters" : "Show Filters"}
             </button>
 
-            {(selectedClass || selectedGender) && (
+            {(selectedClass || searchName || searchRegistration) && (
               <button
                 className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center transition-colors duration-200"
                 onClick={clearFilters}
@@ -429,7 +423,7 @@ function TeacherStudentList() {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 Filters
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Class Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -452,20 +446,32 @@ function TeacherStudentList() {
                   </p>
                 </div>
 
-                {/* Gender Filter */}
+                {/* Student Name Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Filter by Gender
+                    Search by Student Name
                   </label>
-                  <select
-                    value={selectedGender}
-                    onChange={(e) => setSelectedGender(e.target.value)}
+                  <input
+                    type="text"
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                    placeholder="Enter student name..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Genders</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
+                  />
+                </div>
+
+                {/* Registration Number Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search by Registration Number
+                  </label>
+                  <input
+                    type="text"
+                    value={searchRegistration}
+                    onChange={(e) => setSearchRegistration(e.target.value)}
+                    placeholder="Enter registration number..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
             </div>
@@ -478,9 +484,9 @@ function TeacherStudentList() {
                 <>
                   Showing {filteredStudents.length} of {students.length}{" "}
                   students
-                  {selectedGender && (
+                  {(searchName || searchRegistration) && (
                     <span className="ml-2 text-blue-600">
-                      (Filtered by gender)
+                      (Filtered by search criteria)
                     </span>
                   )}
                 </>
