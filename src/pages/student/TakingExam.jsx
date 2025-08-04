@@ -44,7 +44,6 @@ const TakingExam = () => {
   const [autoSaving, setAutoSaving] = useState(false);
 
   // New state for exam session management
-  const [examSession, setExamSession] = useState(null);
   const [attemptId, setAttemptId] = useState(null);
   const [studentId, setStudentId] = useState(null);
 
@@ -114,7 +113,7 @@ const TakingExam = () => {
     };
   }, []);
 
-  // Modified timer effect to work with server-synchronized time
+  //timer effect to work with server-synchronized time
   useEffect(() => {
     if (timeRemaining <= 0) return;
 
@@ -122,6 +121,7 @@ const TakingExam = () => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
+          console.log("Local timer expired");
           handleAutoSubmit();
           return 0;
         }
@@ -132,35 +132,25 @@ const TakingExam = () => {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // Connection status monitoring
-  // useEffect(() => {
-  //   const handleOnline = () => setConnectionStatus(true);
-  //   const handleOffline = () => setConnectionStatus(false);
-
-  //   window.addEventListener("online", handleOnline);
-  //   window.addEventListener("offline", handleOffline);
-
-  //   return () => {
-  //     window.removeEventListener("online", handleOnline);
-  //     window.removeEventListener("offline", handleOffline);
-  //   };
-  // }, []);
-
-  // connection status monitoring with service integration
+  // connection status monitoring with immediate time sync:
   useEffect(() => {
     const handleOnline = () => {
+      console.log("Connection restored - syncing time");
       setConnectionStatus(true);
 
-      // Sync time with server when coming back online
-      syncTimeWithServer();
+      // Immediately sync time when coming back online
+      if (attemptId) {
+        syncTimeWithServer();
+      }
 
-      // Optionally sync data when coming back online
+      // sync answers when coming back online
       if (attemptId && Object.keys(answers).length > 0) {
         autoSaveAnswers();
       }
     };
 
     const handleOffline = () => {
+      console.log("Connection lost");
       setConnectionStatus(false);
     };
 
@@ -178,17 +168,22 @@ const TakingExam = () => {
 
   // helper function to sync time with server immediately
   const syncTimeWithServer = async () => {
-    if (attemptId) {
-      try {
-        const timeData = await TakingExamService.getTimeRemaining(attemptId);
-        setTimeRemaining(timeData.totalSecondsRemaining || 0);
+    if (!attemptId) return;
 
-        if (timeData.timeExpired || timeData.totalSecondsRemaining <= 0) {
-          handleAutoSubmit();
-        }
-      } catch (error) {
-        console.error("Error syncing time:", error);
+    try {
+      const timeData = await TakingExamService.getTimeRemaining(attemptId);
+      const remainingTime = timeData.totalSecondsRemaining || 0;
+
+      // console.log("Synced time from server:", remainingTime);
+      setTimeRemaining(Math.max(0, Math.floor(remainingTime)));
+
+      if (timeData.timeExpired || remainingTime <= 0) {
+        // console.log("Time expired during sync");
+        handleAutoSubmit();
       }
+    } catch (error) {
+      console.error("Error syncing time:", error);
+      // Don't modify timeRemaining if sync fails - let local timer continue
     }
   };
 
@@ -200,15 +195,15 @@ const TakingExam = () => {
       setLoading(true);
       setError(null);
 
-      // First, get exam details for taking
-      const examDetails = await TakingExamService.getExamForTaking(
-        examId,
-        studentId
-      );
-      // setExamData(examDetails);
-
       // Then start the exam session
       const ipAddress = await TakingExamService.getClientIPAddress();
+
+      const examData = await TakingExamService.getExamForTaking(
+        examId,
+        studentId,
+        ipAddress
+      );
+
       const sessionData = await TakingExamService.startExamSession(
         examId,
         studentId,
@@ -216,33 +211,45 @@ const TakingExam = () => {
       );
 
       setExamData(sessionData);
-      // setExamSession(sessionData);
       setAttemptId(sessionData.attemptId);
 
-      // check if sessionData.timeRemaining is in minutes or seconds
-      const timeInSeconds = sessionData.timeRemaining
-        ? sessionData.timeRemaining > 1000
-          ? sessionData.timeRemaining
-          : sessionData.timeRemaining * 60
-        : examDetails.duration * 60;
+      // Get the current time remaining from server immediately after starting session
+      try {
+        const timeData = await TakingExamService.getTimeRemaining(
+          sessionData.attemptId
+        );
+        const remainingTime = timeData.totalSecondsRemaining || 0;
+        console.log("Initial time from server:", remainingTime);
+        setTimeRemaining(Math.max(0, Math.floor(remainingTime)));
 
-      setTimeRemaining(timeInSeconds);
+        if (timeData.timeExpired || remainingTime <= 0) {
+          handleAutoSubmit();
+          return;
+        }
+      } catch (timeError) {
+        console.error("Error getting initial time:", timeError);
+        // Fallback to duration from session data if time fetch fails
+        const fallbackTime = sessionData.durationMinutes
+          ? sessionData.durationMinutes * 60
+          : 0;
+        setTimeRemaining(fallbackTime);
+      }
 
       // Load existing answers if resuming exam
       if (sessionData.existingAnswers) {
-        // Transform the existingAnswers from backend format to frontend format
         const transformedAnswers = {};
         Object.entries(sessionData.existingAnswers).forEach(
           ([questionId, answerObj]) => {
-            // Extract just the answerText from the answer object
             transformedAnswers[questionId] = answerObj.answerText || "";
           }
         );
         setAnswers(transformedAnswers);
       }
 
-      // Start periodic time updates
-      startTimeUpdates();
+      // Start periodic time updates after setting initial time
+      setTimeout(() => {
+        startTimeUpdates();
+      }, 2000); // Delay to ensure state is set
     } catch (err) {
       console.error("Error fetching exam data:", err);
       setError(err.message);
@@ -280,14 +287,16 @@ const TakingExam = () => {
     // Sync time immediately
     syncTimeWithServer();
 
+    // Set up periodic sync every 30 seconds instead of 60 seconds
     timeUpdateIntervalRef.current = setInterval(async () => {
       if (attemptId) {
         try {
           const timeData = await TakingExamService.getTimeRemaining(attemptId);
-          // Use totalSecondsRemaining from server response
-          setTimeRemaining(timeData.totalSecondsRemaining || 0);
+          const remainingTime = timeData.totalSecondsRemaining || 0;
 
-          if (timeData.timeExpired || timeData.totalSecondsRemaining <= 0) {
+          setTimeRemaining(Math.max(0, Math.floor(remainingTime)));
+
+          if (timeData.timeExpired || remainingTime <= 0) {
             clearInterval(timeUpdateIntervalRef.current);
             handleAutoSubmit();
           }
@@ -295,10 +304,10 @@ const TakingExam = () => {
           console.error("Error updating time:", error);
         }
       }
-    }, 60000); // Update every minute
+    }, 30000); // Update every 30 seconds
   };
 
-  // Modified handleSubmitExam function
+  // handle SubmitExam function
   const handleSubmitExam = async () => {
     if (!attemptId) {
       console.error("No attempt ID available for submission");
@@ -349,16 +358,22 @@ const TakingExam = () => {
 
   //Enhanced auto-submit with better error handling
   const handleAutoSubmit = async () => {
-    console.log("Time expired - auto-submitting exam");
+    console.log("Auto-submit triggered - Time expired");
+
+    // Clear all timers immediately
+    if (timeUpdateIntervalRef.current) {
+      clearInterval(timeUpdateIntervalRef.current);
+    }
+
+    // Set time to 0 to show expired state
+    setTimeRemaining(0);
 
     try {
       await handleSubmitExam();
     } catch (error) {
       console.error("Auto-submit failed:", error);
-
-      // Show user that time expired and submission failed
       alert(
-        "Time has expired! There was an issue submitting your exam automatically. Please contact support."
+        "Time has expired! There was an issue submitting your exam automatically. Please contact support immediately."
       );
 
       // Still try to save progress
@@ -381,10 +396,17 @@ const TakingExam = () => {
     await fetchExamData();
   };
 
+  // formatTime function
   const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    // Handle invalid, undefined, or negative seconds
+    if (!seconds || seconds < 0 || isNaN(seconds) || !isFinite(seconds)) {
+      return "00:00";
+    }
+
+    const totalSeconds = Math.floor(Math.abs(seconds)); // Ensure positive integer
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
 
     if (hours > 0) {
       return `${hours}:${mins.toString().padStart(2, "0")}:${secs
@@ -985,8 +1007,10 @@ const TakingExam = () => {
             </div>
             <div className="space-y-2 text-blue-100">
               <p className="text-sm">{examData.subjectName}</p>
-              <p className="text-sm">Duration: {examData.duration} minutes</p>
-              <p className="text-sm">Total Marks: {examData.totalMarks}</p>
+              <p className="text-sm">
+                Duration: {examData.durationMinutes} minutes
+              </p>
+              <p className="text-sm">Total Marks: {examData.maxMarks}</p>
             </div>
             {autoSaving && (
               <div className="mt-3 flex items-center space-x-2 text-blue-100">
@@ -1082,7 +1106,6 @@ const TakingExam = () => {
                 <p className="font-medium text-gray-800">
                   {examData.studentName}
                 </p>
-                <p className="text-sm text-gray-500">{examData.studentId}</p>
               </div>
             </div>
           </div>
@@ -1152,9 +1175,6 @@ const TakingExam = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-800">
                       {examData.studentName}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {examData.studentId}
                     </p>
                   </div>
                 </div>
