@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import TakingExamService from "../../service/TakingExamService";
 import {
@@ -43,12 +43,6 @@ const TakingExam = () => {
   const [submitting, setSubmitting] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
 
-  // state for offline functionality
-  const [offlineAnswers, setOfflineAnswers] = useState({});
-  const [pendingSync, setPendingSync] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState(null);
-  const [offlineMode, setOfflineMode] = useState(false);
-
   // New state for exam session management
   const [attemptId, setAttemptId] = useState(null);
   const [studentId, setStudentId] = useState(null);
@@ -60,16 +54,6 @@ const TakingExam = () => {
   const { id } = useParams();
   const examId = id;
   // const token = localStorage.getItem("token");
-
-  // offline storage utility functions
-  const STORAGE_KEYS = {
-    EXAM_DATA: `exam_${examId}_data`,
-    ANSWERS: `exam_${examId}_answers`,
-    TIME_REMAINING: `exam_${examId}_time`,
-    ATTEMPT_ID: `exam_${examId}_attempt`,
-    LAST_SYNC: `exam_${examId}_last_sync`,
-    OFFLINE_QUEUE: `exam_${examId}_offline_queue`,
-  };
 
   // Initialize student ID from token or localStorage
   useEffect(() => {
@@ -91,43 +75,12 @@ const TakingExam = () => {
     }
   }, [navigate]);
 
-  // useEffect for offline data loading
+  //useEffect for fetching exam data
   useEffect(() => {
     if (studentId) {
-      // Try to load offline data first
-      const offlineExamData = loadFromOfflineStorage(STORAGE_KEYS.EXAM_DATA);
-      const offlineAnswersData = loadFromOfflineStorage(STORAGE_KEYS.ANSWERS);
-      const offlineTimeRemaining = loadFromOfflineStorage(
-        STORAGE_KEYS.TIME_REMAINING
-      );
-      const offlineAttemptId = loadFromOfflineStorage(STORAGE_KEYS.ATTEMPT_ID);
-
-      if (offlineExamData && offlineAttemptId) {
-        console.log("Loading exam from offline storage");
-        setExamData(offlineExamData);
-        setAttemptId(offlineAttemptId);
-
-        if (offlineAnswersData) {
-          setAnswers(offlineAnswersData);
-          setOfflineAnswers(offlineAnswersData);
-        }
-
-        if (offlineTimeRemaining) {
-          setTimeRemaining(offlineTimeRemaining);
-        }
-
-        setLoading(false);
-        setOfflineMode(true);
-
-        // Try to sync if online
-        if (navigator.onLine) {
-          syncWithServer();
-        }
-      } else {
-        fetchExamData();
-      }
+      fetchExamData();
     }
-  }, [studentId, examId]);
+  }, [studentId]);
 
   //useEffect for auto-save with better error handling
   useEffect(() => {
@@ -135,10 +88,12 @@ const TakingExam = () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
+
       autoSaveTimeoutRef.current = setTimeout(() => {
         autoSaveAnswers();
-      }, 30000);
+      }, 30000); // Auto-save every 30 seconds
     }
+
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
@@ -155,22 +110,8 @@ const TakingExam = () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
-
-      // Save current state to offline storage before unmounting
-      if (examData) {
-        saveToOfflineStorage(STORAGE_KEYS.EXAM_DATA, examData);
-      }
-      if (Object.keys(answers).length > 0) {
-        saveToOfflineStorage(STORAGE_KEYS.ANSWERS, answers);
-      }
-      if (timeRemaining) {
-        saveToOfflineStorage(STORAGE_KEYS.TIME_REMAINING, timeRemaining);
-      }
-      if (attemptId) {
-        saveToOfflineStorage(STORAGE_KEYS.ATTEMPT_ID, attemptId);
-      }
     };
-  }, [examData, answers, timeRemaining, attemptId]);
+  }, []);
 
   //timer effect to work with server-synchronized time
   useEffect(() => {
@@ -178,95 +119,75 @@ const TakingExam = () => {
 
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
-        const newTime = prev - 1;
-
-        if (newTime % 30 === 0) {
-          saveToOfflineStorage(STORAGE_KEYS.TIME_REMAINING, newTime);
-        }
-
-        if (newTime <= 1) {
+        if (prev <= 1) {
           clearInterval(timer);
+          console.log("Local timer expired");
           handleAutoSubmit();
           return 0;
         }
-        return newTime;
+        return prev - 1;
       });
     }, 1000);
 
-    return () => {
-      clearInterval(timer);
-    };
+    return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // Enhanced connection status monitoring with offline sync
+  // connection status monitoring with immediate time sync:
   useEffect(() => {
-    const handleOnline = async () => {
-      console.log("Connection restored - syncing with server");
+    const handleOnline = () => {
+      console.log("Connection restored - syncing time");
       setConnectionStatus(true);
-      if (offlineMode) {
-        await syncWithServer();
-      } else if (attemptId) {
+
+      // Immediately sync time when coming back online
+      if (attemptId) {
         syncTimeWithServer();
-        if (Object.keys(answers).length > 0) {
-          autoSaveAnswers();
-        }
+      }
+
+      // sync answers when coming back online
+      if (attemptId && Object.keys(answers).length > 0) {
+        autoSaveAnswers();
       }
     };
 
     const handleOffline = () => {
-      console.log("Connection lost - switching to offline mode");
+      console.log("Connection lost");
       setConnectionStatus(false);
-      setOfflineMode(true);
-
-      // Save current state to offline storage
-      if (examData) {
-        saveToOfflineStorage(STORAGE_KEYS.EXAM_DATA, examData);
-      }
-      if (Object.keys(answers).length > 0) {
-        saveToOfflineStorage(STORAGE_KEYS.ANSWERS, answers);
-        setOfflineAnswers(answers);
-      }
-      if (timeRemaining) {
-        saveToOfflineStorage(STORAGE_KEYS.TIME_REMAINING, timeRemaining);
-      }
-      if (attemptId) {
-        saveToOfflineStorage(STORAGE_KEYS.ATTEMPT_ID, attemptId);
-      }
     };
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
+    // Initial connection check
     setConnectionStatus(navigator.onLine);
-    if (!navigator.onLine) {
-      setOfflineMode(true);
-    }
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [offlineMode, attemptId, answers, examData, timeRemaining]);
+  }, [attemptId, answers]);
 
   // helper function to sync time with server immediately
-  const syncTimeWithServer = useCallback(async () => {
+  const syncTimeWithServer = async () => {
     if (!attemptId) return;
 
     try {
       const timeData = await TakingExamService.getTimeRemaining(attemptId);
       const remainingTime = timeData.totalSecondsRemaining || 0;
 
+      // console.log("Synced time from server:", remainingTime);
       setTimeRemaining(Math.max(0, Math.floor(remainingTime)));
 
       if (timeData.timeExpired || remainingTime <= 0) {
+        // console.log("Time expired during sync");
         handleAutoSubmit();
       }
     } catch (error) {
       console.error("Error syncing time:", error);
+      // Don't modify timeRemaining if sync fails - let local timer continue
     }
-  }, [attemptId]);
+  };
 
-  // fetchExamData with offline support
+  // fetchExamData function
   const fetchExamData = async () => {
     if (!studentId) return;
 
@@ -274,12 +195,9 @@ const TakingExam = () => {
       setLoading(true);
       setError(null);
 
+      // Then start the exam session
       const ipAddress = await TakingExamService.getClientIPAddress();
-      const examData = await TakingExamService.getExamForTaking(
-        examId,
-        studentId,
-        ipAddress
-      );
+
       const sessionData = await TakingExamService.startExamSession(
         examId,
         studentId,
@@ -289,33 +207,29 @@ const TakingExam = () => {
       setExamData(sessionData);
       setAttemptId(sessionData.attemptId);
 
-      // Save to offline storage immediately
-      saveToOfflineStorage(STORAGE_KEYS.EXAM_DATA, sessionData);
-      saveToOfflineStorage(STORAGE_KEYS.ATTEMPT_ID, sessionData.attemptId);
-
-      // Get initial time and save offline
+      // Get the current time remaining from server immediately after starting session
       try {
         const timeData = await TakingExamService.getTimeRemaining(
           sessionData.attemptId
         );
         const remainingTime = timeData.totalSecondsRemaining || 0;
-
+        console.log("Initial time from server:", remainingTime);
         setTimeRemaining(Math.max(0, Math.floor(remainingTime)));
-        saveToOfflineStorage(STORAGE_KEYS.TIME_REMAINING, remainingTime);
 
         if (timeData.timeExpired || remainingTime <= 0) {
           handleAutoSubmit();
           return;
         }
       } catch (timeError) {
+        console.error("Error getting initial time:", timeError);
+        // Fallback to duration from session data if time fetch fails
         const fallbackTime = sessionData.durationMinutes
           ? sessionData.durationMinutes * 60
           : 0;
         setTimeRemaining(fallbackTime);
-        saveToOfflineStorage(STORAGE_KEYS.TIME_REMAINING, fallbackTime);
       }
 
-      // Load existing answers
+      // Load existing answers if resuming exam
       if (sessionData.existingAnswers) {
         const transformedAnswers = {};
         Object.entries(sessionData.existingAnswers).forEach(
@@ -324,88 +238,39 @@ const TakingExam = () => {
           }
         );
         setAnswers(transformedAnswers);
-        setOfflineAnswers(transformedAnswers);
-        saveToOfflineStorage(STORAGE_KEYS.ANSWERS, transformedAnswers);
       }
 
-      setOfflineMode(false);
+      // Start periodic time updates after setting initial time
       setTimeout(() => {
         startTimeUpdates();
-      }, 2000);
+      }, 2000); // Delay to ensure state is set
     } catch (err) {
       console.error("Error fetching exam data:", err);
-
-      // Try to load from offline storage as fallback
-      const offlineExamData = loadFromOfflineStorage(STORAGE_KEYS.EXAM_DATA);
-      const offlineAttemptId = loadFromOfflineStorage(STORAGE_KEYS.ATTEMPT_ID);
-
-      if (offlineExamData && offlineAttemptId) {
-        console.log("Falling back to offline data");
-        setExamData(offlineExamData);
-        setAttemptId(offlineAttemptId);
-
-        const offlineAnswersData = loadFromOfflineStorage(STORAGE_KEYS.ANSWERS);
-        const offlineTimeRemaining = loadFromOfflineStorage(
-          STORAGE_KEYS.TIME_REMAINING
-        );
-
-        if (offlineAnswersData) {
-          setAnswers(offlineAnswersData);
-          setOfflineAnswers(offlineAnswersData);
-        }
-        if (offlineTimeRemaining) {
-          setTimeRemaining(offlineTimeRemaining);
-        }
-
-        setOfflineMode(true);
-      } else {
-        setError(err.message);
-      }
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // autoSaveAnswers function
-  const autoSaveAnswers = useCallback(async () => {
+  //Modified autoSaveAnswers function
+  const autoSaveAnswers = async () => {
     if (!attemptId || Object.keys(answers).length === 0) return;
-
-    if (offlineMode || !navigator.onLine) {
-      console.log("Offline mode - answers saved locally");
-      saveToOfflineStorage(STORAGE_KEYS.ANSWERS, answers);
-      addToOfflineQueue({
-        type: "AUTO_SAVE",
-        answers: answers,
-        timestamp: Date.now(),
-      });
-      setPendingSync(true);
-      return;
-    }
 
     try {
       setAutoSaving(true);
+
+      // the helper function for consistent formatting
       const formattedAnswers = formatAnswersForSubmission(answers);
+
       await TakingExamService.autoSaveProgress(attemptId, formattedAnswers);
-
-      saveToOfflineStorage(STORAGE_KEYS.ANSWERS, answers);
-      setLastSyncTime(Date.now());
-
       console.log("Answers auto-saved successfully");
     } catch (err) {
       console.error("Auto-save failed:", err);
-
-      setOfflineMode(true);
-      saveToOfflineStorage(STORAGE_KEYS.ANSWERS, answers);
-      addToOfflineQueue({
-        type: "AUTO_SAVE_RETRY",
-        answers: answers,
-        timestamp: Date.now(),
-      });
-      setPendingSync(true);
+      // Don't show error to user for auto-save failures
     } finally {
       setAutoSaving(false);
     }
-  }, [attemptId, answers, offlineMode]);
+  };
 
   // function to periodically update time remaining
   const startTimeUpdates = () => {
@@ -436,42 +301,25 @@ const TakingExam = () => {
     }, 30000); // Update every 30 seconds
   };
 
-  // submit with offline handling
+  // handle SubmitExam function
   const handleSubmitExam = async () => {
     if (!attemptId) {
       console.error("No attempt ID available for submission");
       return;
     }
 
-    if (offlineMode || !navigator.onLine) {
-      alert(
-        "Cannot submit exam while offline. Please check your internet connection and try again."
-      );
-      return;
-    }
-
     try {
       setSubmitting(true);
 
-      // Sync any pending offline data first
-      if (pendingSync) {
-        await syncWithServer();
-      }
-
-      // Final auto-save before submission
+      // Final auto-save before submission using helper function
       if (Object.keys(answers).length > 0) {
         const formattedAnswers = formatAnswersForSubmission(answers);
         await TakingExamService.autoSaveProgress(attemptId, formattedAnswers);
       }
 
+      // Submit the exam
       const result = await TakingExamService.submitExamFinal(attemptId);
-
-      // Clear offline storage after successful submission
-      Object.values(STORAGE_KEYS).forEach((key) => {
-        if (window.examOfflineStorage) {
-          delete window.examOfflineStorage[key];
-        }
-      });
+      console.log("Exam submitted successfully:", result);
 
       // Clear intervals
       if (timeUpdateIntervalRef.current) {
@@ -481,6 +329,7 @@ const TakingExam = () => {
         clearTimeout(autoSaveTimeoutRef.current);
       }
 
+      // Navigate to results page
       navigate(`/student/exam-result/${examId}`, {
         state: {
           submissionId: result.submissionId,
@@ -502,71 +351,26 @@ const TakingExam = () => {
   // };
 
   //Enhanced auto-submit with better error handling
-  const handleAutoSubmit = useCallback(async () => {
+  const handleAutoSubmit = async () => {
     console.log("Auto-submit triggered - Time expired");
 
+    // Clear all timers immediately
     if (timeUpdateIntervalRef.current) {
       clearInterval(timeUpdateIntervalRef.current);
     }
 
+    // Set time to 0 to show expired state
     setTimeRemaining(0);
 
     try {
-      if (!attemptId) {
-        console.error("No attempt ID available for submission");
-        return;
-      }
-
-      if (offlineMode || !navigator.onLine) {
-        alert(
-          "Cannot submit exam while offline. Please check your internet connection and try again."
-        );
-        return;
-      }
-
-      setSubmitting(true);
-
-      // Sync any pending offline data first
-      if (pendingSync) {
-        await syncWithServer();
-      }
-
-      // Final auto-save before submission
-      if (Object.keys(answers).length > 0) {
-        const formattedAnswers = formatAnswersForSubmission(answers);
-        await TakingExamService.autoSaveProgress(attemptId, formattedAnswers);
-      }
-
-      const result = await TakingExamService.submitExamFinal(attemptId);
-
-      // Clear offline storage after successful submission
-      Object.values(STORAGE_KEYS).forEach((key) => {
-        if (window.examOfflineStorage) {
-          delete window.examOfflineStorage[key];
-        }
-      });
-
-      // Clear intervals
-      if (timeUpdateIntervalRef.current) {
-        clearInterval(timeUpdateIntervalRef.current);
-      }
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-
-      navigate(`/student/exam-result/${examId}`, {
-        state: {
-          submissionId: result.submissionId,
-          score: result.score,
-          totalMarks: result.totalMarks,
-        },
-      });
-    } catch (err) {
-      console.error("Auto-submit failed:", err);
+      await handleSubmitExam();
+    } catch (error) {
+      console.error("Auto-submit failed:", error);
       alert(
         "Time has expired! There was an issue submitting your exam automatically. Please contact support immediately."
       );
 
+      // Still try to save progress
       if (Object.keys(answers).length > 0 && attemptId) {
         try {
           const formattedAnswers = formatAnswersForSubmission(answers);
@@ -579,10 +383,8 @@ const TakingExam = () => {
           );
         }
       }
-    } finally {
-      setSubmitting(false);
     }
-  }, [attemptId, offlineMode, pendingSync, answers, examId, navigate]);
+  };
 
   const refreshExamData = async () => {
     await fetchExamData();
@@ -616,41 +418,22 @@ const TakingExam = () => {
     return "normal";
   };
 
-  // answer handling with offline storage
   const handleAnswerChange = (questionId, answer) => {
-    const newAnswers = {
-      ...answers,
+    setAnswers((prev) => ({
+      ...prev,
       [questionId]: answer,
-    };
+    }));
 
-    setAnswers(newAnswers);
-
-    // Always save to offline storage
-    saveToOfflineStorage(STORAGE_KEYS.ANSWERS, newAnswers);
-    setOfflineAnswers(newAnswers);
-
-    // Save timestamp
-    saveToOfflineStorage(STORAGE_KEYS.LAST_SYNC, Date.now());
-
-    if (offlineMode) {
-      // Add to offline queue for later sync
-      addToOfflineQueue({
-        type: "ANSWER_UPDATE",
-        questionId,
-        answer,
-        timestamp: Date.now(),
-      });
-      setPendingSync(true);
-    } else {
-      // Online - normal auto-save behavior
-      if (answer && answer.toString().trim() !== "") {
-        if (autoSaveTimeoutRef.current) {
-          clearTimeout(autoSaveTimeoutRef.current);
-        }
-        autoSaveTimeoutRef.current = setTimeout(() => {
-          autoSaveAnswers();
-        }, 5000);
+    // Trigger immediate auto-save for important answers
+    if (answer && answer.toString().trim() !== "") {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
       }
+
+      // Shorter delay for immediate feedback
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        autoSaveAnswers();
+      }, 5000); // 5 seconds for answered questions
     }
   };
 
@@ -849,144 +632,27 @@ const TakingExam = () => {
   );
 
   // Helper function to format answers consistently
-  const formatAnswersForSubmission = useCallback(
-    (answersObj) => {
-      return Object.entries(answersObj).map(([questionId, answer]) => {
-        let answerText = "";
-        if (typeof answer === "string") {
-          answerText = answer;
-        } else if (typeof answer === "object") {
-          answerText = JSON.stringify(answer);
-        } else {
-          answerText = String(answer || "");
-        }
-
-        return {
-          questionId: parseInt(questionId),
-          answerText: answerText,
-          isSelected: answerText.trim() !== "",
-          examAttemptId: attemptId,
-          studentId: studentId,
-        };
-      });
-    },
-    [attemptId, studentId]
-  );
-
-  // OFFLINE FUNCTIONALITIES //
-
-  // Save data to memory-based storage
-  const saveToOfflineStorage = useCallback((key, data) => {
-    try {
-      if (!window.examOfflineStorage) {
-        window.examOfflineStorage = {};
-      }
-      window.examOfflineStorage[key] = JSON.stringify(data);
-      console.log(`Saved ${key} to offline storage`);
-    } catch (error) {
-      console.error("Error saving to offline storage:", error);
-    }
-  }, []);
-
-  const loadFromOfflineStorage = useCallback((key) => {
-    try {
-      if (!window.examOfflineStorage) {
-        return null;
-      }
-      const data = window.examOfflineStorage[key];
-      return data ? JSON.parse(data) : null;
-    } catch (error) {
-      console.error("Error loading from offline storage:", error);
-      return null;
-    }
-  }, []);
-
-  const addToOfflineQueue = useCallback(
-    (operation) => {
-      const queue = loadFromOfflineStorage(STORAGE_KEYS.OFFLINE_QUEUE) || [];
-      queue.push({
-        ...operation,
-        timestamp: Date.now(),
-        id: Math.random().toString(36).substr(2, 9),
-      });
-      saveToOfflineStorage(STORAGE_KEYS.OFFLINE_QUEUE, queue);
-    },
-    [loadFromOfflineStorage, saveToOfflineStorage]
-  );
-
-  // sync function for offline data
-  const syncWithServer = useCallback(async () => {
-    if (!navigator.onLine) {
-      console.log("Cannot sync - still offline");
-      return;
-    }
-
-    try {
-      setPendingSync(true);
-      console.log("Starting offline sync...");
-
-      const offlineQueue =
-        loadFromOfflineStorage(STORAGE_KEYS.OFFLINE_QUEUE) || [];
-
-      if (offlineQueue.length > 0) {
-        console.log(`Processing ${offlineQueue.length} offline operations`);
-
-        const latestAnswers = {};
-        offlineQueue
-          .filter((op) => op.type === "ANSWER_UPDATE")
-          .forEach((op) => {
-            if (
-              !latestAnswers[op.questionId] ||
-              op.timestamp > latestAnswers[op.questionId].timestamp
-            ) {
-              latestAnswers[op.questionId] = op;
-            }
-          });
-
-        if (Object.keys(latestAnswers).length > 0 && attemptId) {
-          const formattedAnswers = Object.values(latestAnswers).map((op) => ({
-            questionId: parseInt(op.questionId),
-            answerText:
-              typeof op.answer === "string"
-                ? op.answer
-                : String(op.answer || ""),
-            isSelected: String(op.answer || "").trim() !== "",
-            examAttemptId: attemptId,
-            studentId: studentId,
-          }));
-
-          await TakingExamService.autoSaveProgress(attemptId, formattedAnswers);
-          console.log("Synced offline answers with server");
-        }
-
-        saveToOfflineStorage(STORAGE_KEYS.OFFLINE_QUEUE, []);
+  const formatAnswersForSubmission = (answersObj) => {
+    return Object.entries(answersObj).map(([questionId, answer]) => {
+      // Ensure answerText is always a string
+      let answerText = "";
+      if (typeof answer === "string") {
+        answerText = answer;
+      } else if (typeof answer === "object") {
+        answerText = JSON.stringify(answer);
+      } else {
+        answerText = String(answer || "");
       }
 
-      if (attemptId) {
-        const timeData = await TakingExamService.getTimeRemaining(attemptId);
-        const remainingTime = timeData.totalSecondsRemaining || 0;
-
-        setTimeRemaining(Math.max(0, Math.floor(remainingTime)));
-        saveToOfflineStorage(STORAGE_KEYS.TIME_REMAINING, remainingTime);
-
-        if (timeData.timeExpired || remainingTime <= 0) {
-          handleAutoSubmit();
-          return;
-        }
-      }
-
-      setLastSyncTime(Date.now());
-      saveToOfflineStorage(STORAGE_KEYS.LAST_SYNC, Date.now());
-      setOfflineMode(false);
-      setPendingSync(false);
-
-      console.log("Offline sync completed successfully");
-    } catch (error) {
-      console.error("Offline sync failed:", error);
-      setPendingSync(false);
-      setOfflineMode(true);
-    }
-  }, [attemptId, studentId]);
+      return {
+        questionId: parseInt(questionId),
+        answerText: answerText,
+        isSelected: answerText.trim() !== "",
+        examAttemptId: attemptId,
+        studentId: studentId,
+      };
+    });
+  };
 
   // Loading state
   if (loading) {
@@ -1347,6 +1013,7 @@ const TakingExam = () => {
               </div>
             )}
           </div>
+
           {/* Navigation */}
           <div className="p-4">
             <nav className="space-y-2">
@@ -1374,6 +1041,7 @@ const TakingExam = () => {
               </button>
             </nav>
           </div>
+
           {/* System Status */}
           <div className="p-4 border-t">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">
@@ -1387,32 +1055,17 @@ const TakingExam = () => {
                   ) : (
                     <WifiOff size={16} className="text-red-500" />
                   )}
-                  <span className="text-sm text-gray-600">
-                    {offlineMode ? "Offline Mode" : "Connection"}
-                  </span>
+                  <span className="text-sm text-gray-600">Connection</span>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      connectionStatus && !offlineMode
-                        ? "bg-green-100 text-green-700"
-                        : offlineMode
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {connectionStatus && !offlineMode
-                      ? "Online"
-                      : offlineMode
-                      ? "Offline"
-                      : "Disconnected"}
-                  </span>
-                  {pendingSync && (
-                    <span className="text-xs text-orange-600 mt-1">
-                      Sync Pending
-                    </span>
-                  )}
-                </div>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    connectionStatus
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {connectionStatus ? "Online" : "Offline"}
+                </span>
               </div>
 
               <div className="flex items-center justify-between">
@@ -1437,33 +1090,6 @@ const TakingExam = () => {
             </div>
           </div>
 
-          {/* Add sync button in the sidebar */}
-          {offlineMode && (
-            <div className="p-4 border-t">
-              <button
-                onClick={syncWithServer}
-                disabled={!connectionStatus || pendingSync}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {pendingSync ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    <span>Syncing...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw size={16} />
-                    <span>Sync Now</span>
-                  </>
-                )}
-              </button>
-              {lastSyncTime && (
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
-                </p>
-              )}
-            </div>
-          )}
           {/* Student Info */}
           <div className="p-4 border-t bg-gray-50">
             <div className="flex items-center space-x-3">
@@ -1788,235 +1414,6 @@ const TakingExam = () => {
           </div>
         </div>
       </div>
-
-      {/* Enhanced Submission Modal */}
-      {showSubmissionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-8 rounded-t-2xl">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold">Submit Exam</h2>
-                  <p className="text-red-100 mt-1">
-                    Please review your answers before final submission
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-8">
-              {/* Submission Statistics */}
-              <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                  <CheckCircle className="w-5 h-5 mr-2 text-blue-500" />
-                  Submission Summary
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="text-3xl font-bold text-blue-600 mb-2">
-                      {getSubmissionStats().total}
-                    </div>
-                    <div className="text-sm text-blue-600 font-medium">
-                      Total Questions
-                    </div>
-                  </div>
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="text-3xl font-bold text-green-600 mb-2">
-                      {getSubmissionStats().answered}
-                    </div>
-                    <div className="text-sm text-green-600 font-medium">
-                      Answered
-                    </div>
-                  </div>
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="text-3xl font-bold text-red-600 mb-2">
-                      {getSubmissionStats().unanswered}
-                    </div>
-                    <div className="text-sm text-red-600 font-medium">
-                      Unanswered
-                    </div>
-                  </div>
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="text-3xl font-bold text-purple-600 mb-2">
-                      {formatTime(timeRemaining)}
-                    </div>
-                    <div className="text-sm text-purple-600 font-medium">
-                      Time Remaining
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Answer Review */}
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <Eye className="w-5 h-5 mr-2 text-gray-600" />
-                  Answer Review
-                </h3>
-
-                {getAnswerSummary().map((question, index) => (
-                  <div
-                    key={question.id}
-                    className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4 mb-3">
-                          <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-semibold">
-                            Question {index + 1}
-                          </span>
-                          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                            {question.questionType.replace("_", " ")}
-                          </span>
-                          <span className="text-sm text-purple-600 font-medium">
-                            {question.marks} marks
-                          </span>
-                        </div>
-                        <p className="text-gray-800 font-medium leading-relaxed">
-                          {question.questionText}
-                        </p>
-                      </div>
-                      <div
-                        className={`ml-4 px-4 py-2 rounded-full text-sm font-semibold ${
-                          question.isAnswered
-                            ? "bg-green-100 text-green-700 border border-green-200"
-                            : "bg-red-100 text-red-700 border border-red-200"
-                        }`}
-                      >
-                        {question.isAnswered ? "✓ Answered" : "⚠ Not Answered"}
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        Your Answer:
-                      </p>
-                      <div className="text-gray-800">
-                        {question.answer === "Not answered" ? (
-                          <div className="flex items-center space-x-2 text-red-600">
-                            <AlertCircle className="w-4 h-4" />
-                            <span className="italic">No answer provided</span>
-                          </div>
-                        ) : question.questionType === "ESSAY" ||
-                          question.questionType === "SHORT_ANSWER" ? (
-                          <div className="max-h-24 overflow-y-auto bg-white p-3 rounded border">
-                            {question.answer.length > 300
-                              ? `${question.answer.substring(0, 300)}...`
-                              : question.answer}
-                          </div>
-                        ) : (
-                          <div className="bg-white p-3 rounded border">
-                            <span className="font-semibold text-blue-600">
-                              {question.answer}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Warnings and Notices */}
-              {getSubmissionStats().unanswered > 0 && (
-                <div className="mt-8 p-6 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
-                  <div className="flex items-start space-x-3">
-                    <AlertCircle className="w-6 h-6 text-yellow-600 mt-0.5" />
-                    <div>
-                      <h4 className="text-yellow-800 font-semibold mb-1">
-                        Incomplete Submission
-                      </h4>
-                      <p className="text-yellow-700">
-                        You have{" "}
-                        <strong>{getSubmissionStats().unanswered}</strong>{" "}
-                        unanswered question(s). You can still submit your exam,
-                        but consider reviewing them first to maximize your
-                        score.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-6 p-6 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                <div className="flex items-center space-x-3">
-                  <Clock className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <h4 className="text-blue-800 font-semibold mb-1">
-                      Time Status
-                    </h4>
-                    <p className="text-blue-700">
-                      Time remaining:{" "}
-                      <strong>{formatTime(timeRemaining)}</strong>
-                      {getTimeStatus() === "critical" && (
-                        <span className="ml-2 text-red-600 font-semibold">
-                          ⚠ Time is running out!
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {!connectionStatus && (
-                <div className="mt-6 p-6 bg-red-50 border-l-4 border-red-400 rounded-r-lg">
-                  <div className="flex items-center space-x-3">
-                    <WifiOff className="w-6 h-6 text-red-600" />
-                    <div>
-                      <h4 className="text-red-800 font-semibold mb-1">
-                        Connection Warning
-                      </h4>
-                      <p className="text-red-700">
-                        You are currently offline. Please check your internet
-                        connection before submitting.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-gray-50 px-8 py-6 flex justify-between items-center border-t rounded-b-2xl">
-              <button
-                onClick={() => setShowSubmissionModal(false)}
-                disabled={submitting}
-                className="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={18} />
-                <span>Review Answers</span>
-              </button>
-              <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-500">
-                  This action cannot be undone
-                </div>
-                <button
-                  onClick={confirmSubmission}
-                  disabled={submitting || !connectionStatus}
-                  className="px-8 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader className="w-5 h-5 animate-spin" />
-                      <span>Submitting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={18} />
-                      <span>Submit Final Exam</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
