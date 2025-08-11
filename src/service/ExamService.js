@@ -740,6 +740,41 @@ class ExamService {
       throw error;
     }
   }
+
+  /**
+   * Check if student has already submitted the exam
+   * @param {number} studentId - The student ID
+   * @param {number} examId - The exam ID
+   * @param {string} token - Authentication token
+   * @returns {Promise} - Response with submission status
+   */
+  static async hasStudentSubmittedExam(studentId, examId, token) {
+    try {
+      const response = await axios.get(
+        `${ExamService.BASE_URL}api/v1/common/exam-attempts/submission-status`,
+        {
+          params: { studentId, examId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return {
+        code: "00",
+        content: response.data,
+        message: "Submission status retrieved successfully",
+      };
+    } catch (error) {
+      console.error("Error checking submission status:", error);
+      if (error.response) {
+        return {
+          code: "01",
+          content: false,
+          message:
+            error.response.data?.message || "Error checking submission status",
+        };
+      }
+      throw error;
+    }
+  }
 }
 
 export default ExamService;

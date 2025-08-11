@@ -31,6 +31,7 @@ function StudentTodayExam() {
   const [exams, setExams] = useState([]);
   const [filteredExams, setFilteredExams] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,6 +39,8 @@ function StudentTodayExam() {
   const [sortOrder, setSortOrder] = useState("asc");
   const [viewMode, setViewMode] = useState("list"); // grid or list
   const [statusFilter, setStatusFilter] = useState("all"); // all, upcoming, ongoing, completed
+
+  const [submissionStatus, setSubmissionStatus] = useState({}); // Track submission status for each exam
 
   const navigate = useNavigate();
 
@@ -54,6 +57,50 @@ function StudentTodayExam() {
   useEffect(() => {
     applyFilters();
   }, [exams, searchTerm, sortBy, sortOrder, statusFilter]);
+
+  useEffect(() => {
+    // Check submission status for all exams when exams are loaded
+    if (exams.length > 0 && studentId) {
+      checkSubmissionStatusForAllExams();
+    }
+  }, [exams, studentId]);
+
+  // Check submission status for all exams
+  const checkSubmissionStatusForAllExams = async () => {
+    const statusChecks = exams.map(async (exam) => {
+      try {
+        const response = await ExamService.hasStudentSubmittedExam(
+          studentId,
+          exam.id,
+          token
+        );
+        return {
+          examId: exam.id,
+          hasSubmitted: response.code === "00" ? response.content : false,
+        };
+      } catch (error) {
+        console.error(
+          `Error checking submission status for exam ${exam.id}:`,
+          error
+        );
+        return {
+          examId: exam.id,
+          hasSubmitted: false,
+        };
+      }
+    });
+
+    try {
+      const results = await Promise.all(statusChecks);
+      const statusMap = {};
+      results.forEach((result) => {
+        statusMap[result.examId] = result.hasSubmitted;
+      });
+      setSubmissionStatus(statusMap);
+    } catch (error) {
+      console.error("Error checking submission status:", error);
+    }
+  };
 
   // Function to fetch today's exams for student
   const fetchTodayExams = async () => {
@@ -89,6 +136,11 @@ function StudentTodayExam() {
   // Function to determine exam status based on date and time
   const getExamStatus = (exam) => {
     if (!exam.examDate || !exam.startTime) return "Unknown";
+
+    // Check if already submitted
+    if (submissionStatus[exam.id] === true) {
+      return "Submitted";
+    }
 
     try {
       const now = new Date();
@@ -143,6 +195,14 @@ function StudentTodayExam() {
           icon: faCheckCircle,
           bgColor: "bg-gray-50",
           borderColor: "border-gray-200",
+        };
+      case "Submitted":
+        return {
+          text: "Submitted",
+          color: "bg-purple-100 text-purple-800",
+          icon: faCheckCircle,
+          bgColor: "bg-purple-50",
+          borderColor: "border-purple-200",
         };
       default:
         return {
@@ -217,14 +277,45 @@ function StudentTodayExam() {
     setStatusFilter("all");
   };
 
-  // Function to handle viewing exam details
   const handleView = (id) => {
-    navigate(`/student/examDetails/${id}`);
+    try {
+      // Add loading state if needed
+      navigate(`/student/examDetails/${id}`);
+    } catch (error) {
+      console.error("Navigation error:", error);
+      toast.error("Failed to navigate to exam details");
+    }
+  };
+
+  // Function to handle viewing with confirmation for submitted exams
+  const handleViewWithStatus = (exam) => {
+    const status = getExamStatus(exam);
+    const hasSubmitted = submissionStatus[exam.id];
+
+    if (hasSubmitted) {
+      // Show confirmation for submitted exams
+      const confirmView = window.confirm(
+        "You have already submitted this exam. Do you want to view your results?"
+      );
+
+      if (confirmView) {
+        navigate(`/student/examResults/${exam.id}`);
+      }
+    } else {
+      // Navigate to regular exam details
+      navigate(`/student/examDetails/${exam.id}`);
+    }
   };
 
   // Function to handle taking exam
   const handleTakeExam = (exam) => {
     const status = getExamStatus(exam);
+
+    // Check if exam is already submitted
+    if (submissionStatus[exam.id] === true) {
+      toast.info("You have already submitted this exam");
+      return;
+    }
 
     if (status === "Ongoing") {
       // Navigate to exam taking page
@@ -234,6 +325,8 @@ function StudentTodayExam() {
       toast.warning("Exam has not started yet");
     } else if (status === "Completed") {
       toast.info("This exam has already ended");
+    } else if (status === "Submitted") {
+      toast.info("You have already submitted this exam");
     }
   };
 
@@ -400,23 +493,43 @@ function StudentTodayExam() {
             </div>
             <div className="flex items-center space-x-2">
               <button
-                className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center space-x-2"
+                className={`px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center space-x-2 ${
+                  navigating ? "opacity-50 cursor-not-allowed" : ""
+                }`}
                 onClick={() => handleView(exam.id)}
+                disabled={navigating}
               >
-                <FontAwesomeIcon icon={faEye} />
-                <span className="text-sm">View</span>
+                <FontAwesomeIcon
+                  icon={navigating ? faSpinner : faEye}
+                  className={navigating ? "animate-spin" : ""}
+                />
+                <span className="text-sm">
+                  {navigating ? "Loading..." : "View"}
+                </span>
               </button>
 
-              {/* Take Exam Button */}
-              {examStatus === "Ongoing" && (
+              {/* "View Results" button for submitted exams */}
+              {submissionStatus[exam.id] === true && (
                 <button
-                  className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 flex items-center space-x-2"
-                  onClick={() => handleTakeExam(exam)}
+                  className="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors duration-200 flex items-center space-x-2"
+                  onClick={() => handleView(exam.id)}
                 >
-                  <FontAwesomeIcon icon={faPlay} />
-                  <span className="text-sm">Take Exam</span>
+                  <FontAwesomeIcon icon={faCheckCircle} />
+                  <span className="text-sm">View Results</span>
                 </button>
               )}
+
+              {/* Take Exam Button */}
+              {examStatus === "Ongoing" &&
+                submissionStatus[exam.id] !== true && (
+                  <button
+                    className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 flex items-center space-x-2"
+                    onClick={() => handleTakeExam(exam)}
+                  >
+                    <FontAwesomeIcon icon={faPlay} />
+                    <span className="text-sm">Take Exam</span>
+                  </button>
+                )}
             </div>
           </div>
         </div>
@@ -483,17 +596,54 @@ function StudentTodayExam() {
           </div>
           <div className="flex items-center space-x-2">
             <button
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center space-x-2"
+              className={`px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center space-x-2 ${
+                navigating ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               onClick={() => handleView(exam.id)}
+              disabled={navigating}
             >
-              <FontAwesomeIcon icon={faEye} />
-              <span className="text-sm">View Details</span>
+              <FontAwesomeIcon
+                icon={navigating ? faSpinner : faEye}
+                className={navigating ? "animate-spin" : ""}
+              />
+              <span className="text-sm">
+                {navigating ? "Loading..." : "View Details"}
+              </span>
             </button>
 
-            {/* Take Exam Button */}
-            {examStatus === "Ongoing" && (
+            {/* behavior based on submission status */}
+            {/* {submissionStatus[exam.id] === true ? (
               <button
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 flex items-center space-x-2"
+                className="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors duration-200 flex items-center space-x-2"
+                onClick={() => navigate(`/student/examResults/${exam.id}`)}
+              >
+                <FontAwesomeIcon icon={faCheckCircle} />
+                <span className="text-sm">View Results</span>
+              </button>
+            ) : (
+              <button
+                className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center space-x-2"
+                onClick={() => handleView(exam)}
+              >
+                <FontAwesomeIcon icon={faEye} />
+                <span className="text-sm">View Details</span>
+              </button>
+            )} */}
+
+            {/* "View Results" button for submitted exams */}
+            {submissionStatus[exam.id] === true && (
+              <button
+                className="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors duration-200 flex items-center space-x-2"
+                onClick={() => handleView(exam.id)}
+              >
+                <FontAwesomeIcon icon={faCheckCircle} />
+                <span className="text-sm">View Results</span>
+              </button>
+            )}
+            {/* Take Exam Button */}
+            {examStatus === "Ongoing" && submissionStatus[exam.id] !== true && (
+              <button
+                className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 flex items-center space-x-2"
                 onClick={() => handleTakeExam(exam)}
               >
                 <FontAwesomeIcon icon={faPlay} />
@@ -567,6 +717,7 @@ function StudentTodayExam() {
                   <option value="upcoming">Upcoming</option>
                   <option value="ongoing">Ongoing</option>
                   <option value="completed">Completed</option>
+                  <option value="submitted">Submitted</option>
                 </select>
 
                 {/* Sort */}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import TakingExamService from "../../service/TakingExamService";
+import ExamChatComponent from "../../components/ExamChatComponent";
+import ExamChatService from "../../service/ExamChatService";
 import {
   MessageCircle,
   Bell,
@@ -52,6 +54,8 @@ const TakingExam = () => {
   // New state for exam session management
   const [attemptId, setAttemptId] = useState(null);
   const [studentId, setStudentId] = useState(null);
+
+  const [chatOpen, setChatOpen] = useState(false);
 
   const editorRef = useRef(null);
   const navigate = useNavigate();
@@ -169,8 +173,11 @@ const TakingExam = () => {
       if (attemptId) {
         saveToOfflineStorage(STORAGE_KEYS.ATTEMPT_ID, attemptId);
       }
+
+      // Properly disconnect chat service
+      ExamChatService.disconnect();
     };
-  }, [examData, answers, timeRemaining, attemptId]);
+  }, [examData, answers, timeRemaining, attemptId, chatOpen]);
 
   //timer effect to work with server-synchronized time
   useEffect(() => {
@@ -287,6 +294,7 @@ const TakingExam = () => {
       );
 
       setExamData(sessionData);
+
       setAttemptId(sessionData.attemptId);
 
       // Save to offline storage immediately
@@ -882,7 +890,7 @@ const TakingExam = () => {
         window.examOfflineStorage = {};
       }
       window.examOfflineStorage[key] = JSON.stringify(data);
-      console.log(`Saved ${key} to offline storage`);
+      // console.log(`Saved ${key} to offline storage`);
     } catch (error) {
       console.error("Error saving to offline storage:", error);
     }
@@ -987,6 +995,18 @@ const TakingExam = () => {
       setOfflineMode(true);
     }
   }, [attemptId, studentId]);
+
+  //function to handle chat toggle
+  const handleChatToggle = () => {
+    setChatOpen(!chatOpen);
+  };
+
+  //function to handle chat close
+  const handleChatClose = () => {
+    setChatOpen(false);
+    // Properly disconnect chat service when chat is closed
+    ExamChatService.disconnect();
+  };
 
   // Loading state
   if (loading) {
@@ -1355,10 +1375,28 @@ const TakingExam = () => {
                 <span className="font-medium">Taking Exam</span>
               </div>
 
-              <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+              <button
+                onClick={handleChatToggle}
+                className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors relative"
+              >
                 <MessageCircle size={18} />
                 <span>Chat Support</span>
+                <div className="ml-auto flex items-center space-x-1">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      chatOpen ? "bg-blue-500" : "bg-green-500"
+                    }`}
+                  ></div>
+                  <span className="text-xs text-gray-500">
+                    {chatOpen ? "Open" : "Available"}
+                  </span>
+                </div>
               </button>
+
+              {/* <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                <MessageCircle size={18} />
+                <span>Chat Support</span>
+              </button> */}
 
               <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
                 <Bell size={18} />
@@ -1414,7 +1452,6 @@ const TakingExam = () => {
                   )}
                 </div>
               </div>
-
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   {examData.isProctoringEnabled ? (
@@ -1432,6 +1469,23 @@ const TakingExam = () => {
                   }`}
                 >
                   {examData.isProctoringEnabled ? "Active" : "Inactive"}
+                </span>
+              </div>
+
+              {/* Add connection status indicator */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <MessageCircle size={16} className="text-blue-500" />
+                  <span className="text-sm text-gray-600">Chat</span>
+                </div>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    chatOpen
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {chatOpen ? "Active" : "Available"}
                 </span>
               </div>
             </div>
@@ -2016,6 +2070,17 @@ const TakingExam = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chat Component */}
+      {chatOpen && (
+        <ExamChatComponent
+          examId={examId}
+          studentId={studentId}
+          isOpen={chatOpen}
+          onToggle={handleChatToggle}
+          onClose={handleChatClose}
+        />
       )}
     </div>
   );
