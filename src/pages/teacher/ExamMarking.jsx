@@ -295,14 +295,14 @@ function ExamMarking() {
         name: "Actions",
         cell: (row) => (
           <div className="flex items-center space-x-1">
-            <button
+            {/* <button
               onClick={() => handleViewAttempt(row.id)}
               className="flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
               title="View Attempt"
             >
               <FontAwesomeIcon icon={faEye} className="text-xs" />
               <span>View</span>
-            </button>
+            </button> */}
             <button
               onClick={() => handleMarkAttempt(row.id)}
               className="flex items-center space-x-1 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"

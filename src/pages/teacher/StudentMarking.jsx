@@ -25,6 +25,7 @@ import {
 import Header from "../../partials/Header";
 import Sidebar from "../../partials/TeacherSidebar";
 import ExamAttemptService from "../../service/ExamAttemptService";
+import StudentAnswerService from "../../service/StudentAnswerService";
 
 // Add these components at the top after imports
 const LoadingSpinner = () => (
@@ -121,25 +122,30 @@ function StudentMarking() {
         ),
       }));
 
-      // API call to save marking
-      const response = await ExamAttemptService.markStudentAnswer(
+      console.log("Marking answer:", {
         answerId,
-        {
-          marksAwarded,
-          isCorrect,
-          teacherFeedback: feedback,
-        },
-        token
-      );
+        marksAwarded,
+        isCorrect,
+        feedback,
+      });
 
-      if (response.code !== "00") {
+      // API call to save marking
+      const response = await StudentAnswerService.markAnswer(answerId, {
+        marksAwarded,
+        isCorrect,
+        teacherFeedback: feedback,
+      });
+
+      if (!response.success) {
         throw new Error(response.message || "Failed to mark answer");
       }
 
       toast.success("Answer marked successfully");
+      // Reload the attempt to refresh data
+      loadExamAttempt();
     } catch (error) {
       console.error("Error marking answer:", error);
-      toast.error("Failed to mark answer");
+      toast.error(error.message || "Failed to mark answer");
       // Revert local state on error
       loadExamAttempt();
     }
@@ -194,11 +200,23 @@ function StudentMarking() {
         ),
       }));
 
-      // API call to flag/unflag answer
-      // await ExamAttemptService.flagAnswer(answerId, flagReason, token);
+      const response = await StudentAnswerService.flagAnswer(
+        answerId,
+        flagReason
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to flag answer");
+      }
+
+      toast.success(
+        response.data.isFlagged ? "Answer flagged" : "Answer unflagged"
+      );
     } catch (error) {
       console.error("Error flagging answer:", error);
-      toast.error("Failed to flag answer");
+      toast.error(error.message || "Failed to flag answer");
+      // Revert local state on error
+      loadExamAttempt();
     }
   };
 
@@ -280,7 +298,46 @@ function StudentMarking() {
   const markedCount =
     selectedAttempt?.studentAnswers.filter((a) => a.isMarked).length || 0;
 
-  // QuestionCard component updated for new data structure
+  // Helper function to get answer status styling
+  const getAnswerStatusStyle = (answer) => {
+    if (!answer.isMarked) return "";
+
+    if (answer.isCorrect === true) {
+      return "border-l-4 border-l-green-500 bg-green-50";
+    } else if (answer.isCorrect === false) {
+      return "border-l-4 border-l-red-500 bg-red-50";
+    } else {
+      return "border-l-4 border-l-yellow-500 bg-yellow-50";
+    }
+  };
+
+  // Helper function to get student answer styling
+  const getStudentAnswerStyle = (answer) => {
+    if (!answer.isMarked) return "bg-gray-50 border";
+
+    if (answer.isCorrect === true) {
+      return "bg-green-50 border border-green-200";
+    } else if (answer.isCorrect === false) {
+      return "bg-red-50 border border-red-300";
+    } else {
+      return "bg-yellow-50 border border-yellow-200";
+    }
+  };
+
+  // Helper function to get student answer text styling
+  const getStudentAnswerTextStyle = (answer) => {
+    if (!answer.isMarked) return "text-gray-700";
+
+    if (answer.isCorrect === true) {
+      return "text-green-800";
+    } else if (answer.isCorrect === false) {
+      return "text-red-800 font-medium";
+    } else {
+      return "text-yellow-800";
+    }
+  };
+
+  // QuestionCard component updated with enhanced color coding
   const QuestionCard = ({ answer, onMark, onFlag, onAutoMark }) => {
     const [marks, setMarks] = useState(answer.marksAwarded || 0);
     const [feedback, setFeedback] = useState(answer.teacherFeedback || "");
@@ -325,7 +382,11 @@ function StudentMarking() {
     };
 
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div
+        className={`bg-white rounded-lg shadow-md p-6 mb-6 ${getAnswerStatusStyle(
+          answer
+        )}`}
+      >
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-2">
             <span className="text-lg">
@@ -341,6 +402,23 @@ function StudentMarking() {
             <span className="text-sm text-gray-600">
               {questionDetails.marks} marks
             </span>
+            {answer.isMarked && (
+              <span
+                className={`px-2 py-1 text-xs rounded-full font-medium ${
+                  answer.isCorrect === true
+                    ? "bg-green-100 text-green-800"
+                    : answer.isCorrect === false
+                    ? "bg-red-100 text-red-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}
+              >
+                {answer.isCorrect === true
+                  ? "✓ Correct"
+                  : answer.isCorrect === false
+                  ? "✗ Wrong"
+                  : "~ Partial"}
+              </span>
+            )}
           </div>
           <div className="flex gap-2">
             {["MULTIPLE_CHOICE", "TRUE_FALSE", "SHORT_ANSWER"].includes(
@@ -377,23 +455,56 @@ function StudentMarking() {
               <div className="mt-2">
                 <p className="text-sm text-gray-600 mb-1">Options:</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {questionDetails.options.map((option, idx) => (
-                    <div
-                      key={idx}
-                      className="text-sm text-gray-600 bg-gray-50 p-2 rounded"
-                    >
-                      {String.fromCharCode(65 + idx)}. {option}
-                    </div>
-                  ))}
+                  {questionDetails.options.map((option, idx) => {
+                    const isCorrectOption =
+                      option === questionDetails.correctAnswer;
+                    const isStudentChoice = option === answer.answerText;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`text-sm p-2 rounded border ${
+                          isCorrectOption && isStudentChoice
+                            ? "bg-green-100 border-green-300 text-green-800"
+                            : isCorrectOption
+                            ? "bg-green-50 border-green-200 text-green-700"
+                            : isStudentChoice &&
+                              answer.isMarked &&
+                              answer.isCorrect === false
+                            ? "bg-red-100 border-red-300 text-red-800"
+                            : "bg-gray-50 border-gray-200 text-gray-600"
+                        }`}
+                      >
+                        {String.fromCharCode(65 + idx)}. {option}
+                        {isCorrectOption && (
+                          <span className="ml-2 text-green-600">✓</span>
+                        )}
+                        {isStudentChoice && (
+                          <span className="ml-2 text-blue-600">👤</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
         </div>
 
         <div className="mb-4">
-          <h3 className="font-semibold text-gray-800 mb-2">Student Answer:</h3>
-          <div className="bg-gray-50 p-3 rounded border">
-            <p className="text-gray-700">
+          <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+            Student Answer:
+            {answer.isMarked && answer.isCorrect === false && (
+              <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
+            )}
+            {answer.isMarked && answer.isCorrect === true && (
+              <FontAwesomeIcon
+                icon={faCheckCircle}
+                className="text-green-500"
+              />
+            )}
+          </h3>
+          <div className={`p-3 rounded ${getStudentAnswerStyle(answer)}`}>
+            <p className={getStudentAnswerTextStyle(answer)}>
               {answer.answerText
                 ? stripHtml(answer.answerText)
                 : "No answer provided"}
@@ -404,7 +515,9 @@ function StudentMarking() {
         <div className="mb-4">
           <h3 className="font-semibold text-gray-800 mb-2">Correct Answer:</h3>
           <div className="bg-green-50 p-3 rounded border border-green-200">
-            <p className="text-green-800">{questionDetails.correctAnswer}</p>
+            <p className="text-green-800 font-medium">
+              {questionDetails.correctAnswer}
+            </p>
           </div>
         </div>
 
@@ -471,7 +584,11 @@ function StudentMarking() {
             onClick={() => onMark(answer.id, marks, isCorrect, feedback)}
             className={`px-4 py-2 rounded font-medium transition-colors ${
               answer.isMarked
-                ? "bg-green-500 text-white"
+                ? answer.isCorrect === true
+                  ? "bg-green-500 text-white hover:bg-green-600"
+                  : answer.isCorrect === false
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-yellow-500 text-white hover:bg-yellow-600"
                 : "bg-blue-500 text-white hover:bg-blue-600"
             }`}
           >
@@ -480,9 +597,31 @@ function StudentMarking() {
         </div>
 
         {answer.isMarked && (
-          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-            <p className="text-sm text-green-800">
-              ✓ Marked: {answer.marksAwarded}/{maxMarks} marks
+          <div
+            className={`mt-2 p-2 rounded border ${
+              answer.isCorrect === true
+                ? "bg-green-50 border-green-200"
+                : answer.isCorrect === false
+                ? "bg-red-50 border-red-200"
+                : "bg-yellow-50 border-yellow-200"
+            }`}
+          >
+            <p
+              className={`text-sm ${
+                answer.isCorrect === true
+                  ? "text-green-800"
+                  : answer.isCorrect === false
+                  ? "text-red-800"
+                  : "text-yellow-800"
+              }`}
+            >
+              {answer.isCorrect === true
+                ? "✓"
+                : answer.isCorrect === false
+                ? "✗"
+                : "~"}{" "}
+              Marked: {answer.marksAwarded}/{maxMarks} marks
+              {answer.isCorrect === false && " - Incorrect Answer"}
             </p>
           </div>
         )}
@@ -570,11 +709,15 @@ function StudentMarking() {
                     }
                     className="px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    {selectedAttempt.studentAnswers.map((_, idx) => (
+                    {selectedAttempt.studentAnswers.map((answer, idx) => (
                       <option key={idx} value={idx}>
                         Q{idx + 1}{" "}
-                        {selectedAttempt.studentAnswers[idx].isMarked
-                          ? "✓"
+                        {answer.isMarked
+                          ? answer.isCorrect === true
+                            ? "✓"
+                            : answer.isCorrect === false
+                            ? "✗"
+                            : "~"
                           : "○"}
                       </option>
                     ))}
@@ -604,18 +747,51 @@ function StudentMarking() {
                     className={`aspect-square rounded-lg border-2 text-sm font-medium transition-colors ${
                       idx === currentQuestionIndex
                         ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : answer.isMarked
+                        : answer.isMarked && answer.isCorrect === true
                         ? "border-green-500 bg-green-50 text-green-700"
+                        : answer.isMarked && answer.isCorrect === false
+                        ? "border-red-500 bg-red-100 text-red-800"
+                        : answer.isMarked
+                        ? "border-yellow-500 bg-yellow-50 text-yellow-700"
                         : answer.isFlagged
                         ? "border-red-500 bg-red-50 text-red-700"
                         : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                     }`}
                   >
                     {idx + 1}
-                    {answer.isMarked && <div className="text-xs">✓</div>}
-                    {answer.isFlagged && <div className="text-xs">🚩</div>}
+                    <div className="text-xs">
+                      {answer.isMarked
+                        ? answer.isCorrect === true
+                          ? "✓"
+                          : answer.isCorrect === false
+                          ? "✗"
+                          : "~"
+                        : answer.isFlagged
+                        ? "🚩"
+                        : ""}
+                    </div>
                   </button>
                 ))}
+              </div>
+
+              {/* Legend */}
+              <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-100 border border-green-500 rounded"></div>
+                  <span>Correct</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-100 border border-red-500 rounded"></div>
+                  <span>Wrong</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-yellow-100 border border-yellow-500 rounded"></div>
+                  <span>Partial</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                  <span>Not Marked</span>
+                </div>
               </div>
             </div>
           </div>

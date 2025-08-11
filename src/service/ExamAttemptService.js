@@ -1,6 +1,6 @@
 import axios from "axios";
 
-class TakingExamService {
+class ExamAttemptService {
   constructor() {
     // Base URL for the API - adjust this to match your backend URL
     this.baseURL =
@@ -203,8 +203,8 @@ class TakingExamService {
 }
 
 // Export a singleton instance
-const takingExamService = new TakingExamService();
-export default takingExamService;
+const examAttemptService = new ExamAttemptService();
+export default examAttemptService;
 
 // Also export the class for custom instances if needed
-export { TakingExamService };
+export { ExamAttemptService };
